@@ -1,0 +1,630 @@
+// ═══════════════════════════════════════════════════════════
+// Salone Travel Concierge — Prisma Schema
+// 17 domain tables across 6 domains
+// ═══════════════════════════════════════════════════════════
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto, citext]
+}
+
+// ─── Enumerations ──────────────────────────────────────────
+
+enum UserRole {
+  traveler
+  provider
+  concierge
+  admin
+}
+
+enum UserStatus {
+  active
+  suspended
+}
+
+enum VerificationPurpose {
+  email_verify
+  password_reset
+  phone_verify
+}
+
+enum ProviderCategory {
+  hotel
+  guest_house
+  tour_operator
+  guide
+  driver
+  car_rental
+  boat_operator
+  restaurant
+  event_organiser
+}
+
+// NOTE: See docs/SPEC_CONFLICTS.md — Conflict 2
+// The SDS does NOT include 'changes_requested' in this enum,
+// but the provider verification workflow references it.
+// Isolated here so the value can be added cleanly later.
+enum ProviderStatus {
+  draft
+  submitted
+  under_review
+  changes_requested
+  approved
+  listed
+  suspended
+  rejected
+}
+
+enum VerificationStatus {
+  pending
+  verified
+  rejected
+}
+
+enum DestinationCategory {
+  beach
+  wildlife
+  heritage
+  island
+  city
+  nature
+  culture
+}
+
+enum ServiceType {
+  accommodation
+  transfer
+  tour
+  rental
+  guide
+  meal
+  boat_trip
+  experience
+  event
+}
+
+enum DocumentType {
+  business_registration
+  tax_id
+  insurance
+  permit
+  id_document
+  other
+}
+
+enum DocumentStatus {
+  pending
+  approved
+  rejected
+}
+
+enum BookingStatus {
+  pending
+  accepted
+  awaiting_payment
+  paid
+  confirmed
+  in_progress
+  completed
+  declined
+  expired
+  payment_failed
+  cancelled_by_traveler
+  cancelled_by_provider
+  no_show
+}
+
+enum PaymentStatus {
+  requires_payment_method
+  requires_action
+  processing
+  succeeded
+  failed
+  cancelled
+}
+
+enum RefundReason {
+  traveler_cancelled
+  provider_cancelled
+  no_show
+  service_failure
+  duplicate
+  other
+}
+
+enum RefundStatus {
+  pending
+  succeeded
+  failed
+}
+
+enum ReviewStatus {
+  pending_moderation
+  published
+  hidden
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOMAIN 1 — Identity & Authentication
+// ═══════════════════════════════════════════════════════════
+
+/// Root identity table. Email is case-insensitive via citext.
+model User {
+  id                String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email             String      @unique @db.Citext
+  phone             String?     // E.164 format
+  passwordHash      String      @map("password_hash")
+  fullName          String      @map("full_name")
+  role              UserRole    @default(traveler)
+  status            UserStatus  @default(active)
+  emailVerifiedAt   DateTime?   @map("email_verified_at") @db.Timestamptz
+  phoneVerifiedAt   DateTime?   @map("phone_verified_at") @db.Timestamptz
+  locale            String      @default("en-SL")
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+  version           Int         @default(1)
+
+  // Relations
+  refreshSessions   RefreshSession[]
+  emailVerifications EmailVerification[]
+  travelerProfile   TravelerProfile?
+  provider          Provider?
+  bookingsAsTraveler Booking[]  @relation("TravelerBookings")
+  reviewsAuthored   Review[]   @relation("ReviewAuthor")
+  auditLogs         AuditLog[] @relation("AuditActor")
+  conversationsAsTraveler Conversation[] @relation("ConversationTraveler")
+  conversationsAsConcierge Conversation[] @relation("ConversationConcierge")
+  messagesSent      Message[]
+
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+/// Persistent refresh sessions — stores SHA-256 hash, never raw tokens.
+model RefreshSession {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  tokenHash   String    @map("token_hash") @db.VarChar(64)
+  userAgent   String?   @map("user_agent")
+  ipAddress   String?   @map("ip_address")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
+}
+
+/// Email verification / password reset codes (SHA-256 hashed, single-use).
+model EmailVerification {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String              @map("user_id") @db.Uuid
+  purpose     VerificationPurpose
+  codeHash    String              @map("code_hash") @db.VarChar(64)
+  expiresAt   DateTime            @map("expires_at") @db.Timestamptz
+  consumedAt  DateTime?           @map("consumed_at") @db.Timestamptz
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([codeHash])
+  @@index([expiresAt])
+  @@map("email_verifications")
+}
+
+/// Extended traveler profile data.
+model TravelerProfile {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @unique @map("user_id") @db.Uuid
+  nationality     String?
+  passportCountry String?   @map("passport_country")
+  dietaryPrefs    String[]  @map("dietary_prefs")
+  interests       String[]
+  emergencyName   String?   @map("emergency_name")
+  emergencyPhone  String?   @map("emergency_phone")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("traveler_profiles")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOMAIN 2 — Catalog
+// ═══════════════════════════════════════════════════════════
+
+/// Service provider (hotel, tour operator, guide, etc.).
+model Provider {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String            @unique @map("user_id") @db.Uuid
+  businessName     String            @map("business_name")
+  slug             String?           @unique
+  category         ProviderCategory
+  status           ProviderStatus    @default(draft)
+  description      String?
+  phone            String?
+  whatsapp         String?
+  email            String?           @db.Citext
+  website          String?
+  address          String?
+  city             String?
+  region           String?
+  languages        String[]          @default([])
+  latitude         Float?
+  longitude        Float?
+  // location      Unsupported("geography(Point,4326)")? -- requires PostGIS
+  logoUrl          String?           @map("logo_url")
+  coverUrl         String?           @map("cover_url")
+  verificationStatus VerificationStatus @default(pending) @map("verification_status")
+  verifiedAt       DateTime?         @map("verified_at") @db.Timestamptz
+  verifiedBy       String?           @map("verified_by") @db.Uuid
+  commissionRate   Int               @default(15) @map("commission_rate") // percentage
+  avgRating        Float?            @map("avg_rating")
+  reviewCount      Int               @default(0) @map("review_count")
+  deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  version          Int               @default(1)
+
+  // Relations
+  user             User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  services         Service[]
+  documents        ProviderDocument[]
+  bookings         Booking[]
+  reviews          Review[]
+
+  @@index([category])
+  @@index([status])
+  @@index([slug])
+  @@index([verificationStatus])
+  @@index([city])
+  @@index([deletedAt])
+  @@map("providers")
+}
+
+/// Service listing offered by a provider.
+model Service {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId      String        @map("provider_id") @db.Uuid
+  name            String
+  type            ServiceType
+  description     String?
+  shortDescription String?     @map("short_description")
+  priceCents      Int           @map("price_cents")
+  currency        String        @default("SLE")
+  durationMinutes Int?          @map("duration_minutes")
+  maxCapacity     Int?          @map("max_capacity")
+  commissionRate  Int?          @map("commission_rate")
+  images          String[]
+  inclusions      String[]
+  exclusions      String[]
+  isActive        Boolean       @default(true) @map("is_active")
+  avgRating       Float?        @map("avg_rating")
+  reviewCount     Int           @default(0) @map("review_count")
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  version         Int           @default(1)
+
+  // Relations
+  provider        Provider      @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  bookings        Booking[]
+
+  @@index([providerId])
+  @@index([type])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("services")
+}
+
+/// Verification documents uploaded by a provider.
+model ProviderDocument {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId  String         @map("provider_id") @db.Uuid
+  type        DocumentType
+  status      DocumentStatus @default(pending)
+  fileUrl     String         @map("file_url")
+  fileName    String         @map("file_name")
+  fileSize    Int            @map("file_size")
+  mimeType    String         @map("mime_type")
+  reviewedBy  String?        @map("reviewed_by") @db.Uuid
+  reviewedAt  DateTime?      @map("reviewed_at") @db.Timestamptz
+  reviewNotes String?        @map("review_notes")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  provider    Provider       @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@index([providerId])
+  @@index([status])
+  @@map("provider_documents")
+}
+
+/// Travel destination.
+model Destination {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  slug        String              @unique
+  category    DestinationCategory
+  description String?
+  shortDescription String?       @map("short_description")
+  region      String?
+  latitude    Float?
+  longitude   Float?
+  // location Unsupported("geography(Point,4326)")? -- requires PostGIS
+  images      String[]
+  highlights  String[]
+  isFeatured  Boolean             @default(false) @map("is_featured")
+  deletedAt   DateTime?           @map("deleted_at") @db.Timestamptz
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+  version     Int                 @default(1)
+
+  @@index([category])
+  @@index([isFeatured])
+  @@index([slug])
+  @@index([deletedAt])
+  @@map("destinations")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOMAIN 3 — Booking
+// ═══════════════════════════════════════════════════════════
+
+/// Booking request from a traveler for a service.
+model Booking {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reference           String        @unique
+  travelerId          String        @map("traveler_id") @db.Uuid
+  providerId          String        @map("provider_id") @db.Uuid
+  serviceId           String        @map("service_id") @db.Uuid
+  status              BookingStatus @default(pending)
+  scheduledDate       DateTime      @map("scheduled_date") @db.Timestamptz
+  scheduledEndDate    DateTime?     @map("scheduled_end_date") @db.Timestamptz
+  guestCount          Int           @default(1) @map("guest_count")
+  totalCents          Int           @map("total_cents")
+  commissionCents     Int           @map("commission_cents")
+  providerEarningsCents Int         @map("provider_earnings_cents")
+  currency            String        @default("SLE")
+  specialRequests     String?       @map("special_requests")
+  cancellationReason  String?       @map("cancellation_reason")
+  declinedReason      String?       @map("declined_reason")
+  expiresAt           DateTime?     @map("expires_at") @db.Timestamptz
+  confirmedAt         DateTime?     @map("confirmed_at") @db.Timestamptz
+  completedAt         DateTime?     @map("completed_at") @db.Timestamptz
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  version             Int           @default(1)
+
+  // Relations
+  traveler            User          @relation("TravelerBookings", fields: [travelerId], references: [id], onDelete: Restrict)
+  provider            Provider      @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  service             Service       @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  events              BookingEvent[]
+  payments            Payment[]
+  refunds             Refund[]
+  conversations       Conversation[]
+  review              Review?
+
+  @@index([travelerId])
+  @@index([providerId])
+  @@index([serviceId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([expiresAt])
+  @@map("bookings")
+}
+
+/// Immutable event log for booking state transitions.
+model BookingEvent {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId   String   @map("booking_id") @db.Uuid
+  fromStatus  String?  @map("from_status")
+  toStatus    String   @map("to_status")
+  actorId     String?  @map("actor_id") @db.Uuid
+  actorRole   String?  @map("actor_role")
+  reason      String?
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([createdAt])
+  @@map("booking_events")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOMAIN 4 — Payments
+// ═══════════════════════════════════════════════════════════
+
+/// Payment record linked to a booking.
+model Payment {
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId            String        @map("booking_id") @db.Uuid
+  stripePaymentIntentId String?      @unique @map("stripe_payment_intent_id")
+  status               PaymentStatus @default(requires_payment_method)
+  amountCents          Int           @map("amount_cents")
+  currency             String        @default("SLE")
+  metadata             Json?
+  failureReason        String?       @map("failure_reason")
+  paidAt               DateTime?     @map("paid_at") @db.Timestamptz
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  version              Int           @default(1)
+
+  // Relations
+  booking              Booking       @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([status])
+  @@index([stripePaymentIntentId])
+  @@map("payments")
+}
+
+/// Refund record linked to a booking.
+model Refund {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId       String       @map("booking_id") @db.Uuid
+  stripeRefundId  String?      @unique @map("stripe_refund_id")
+  reason          RefundReason
+  status          RefundStatus @default(pending)
+  amountCents     Int          @map("amount_cents")
+  currency        String       @default("SLE")
+  initiatedBy     String?      @map("initiated_by") @db.Uuid
+  notes           String?
+  processedAt     DateTime?    @map("processed_at") @db.Timestamptz
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  version         Int          @default(1)
+
+  // Relations
+  booking         Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("refunds")
+}
+
+/// Raw Stripe webhook events for idempotency and audit.
+model WebhookEvent {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stripeEventId   String   @unique @map("stripe_event_id")
+  eventType       String   @map("event_type")
+  payload         Json
+  processed       Boolean  @default(false)
+  processedAt     DateTime? @map("processed_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([stripeEventId])
+  @@index([processed])
+  @@index([eventType])
+  @@map("webhook_events")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOMAIN 5 — Messaging
+// ═══════════════════════════════════════════════════════════
+
+/// Concierge conversation thread.
+model Conversation {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  travelerId    String    @map("traveler_id") @db.Uuid
+  conciergeId   String?   @map("concierge_id") @db.Uuid
+  bookingId     String?   @map("booking_id") @db.Uuid
+  subject       String?
+  isEmergency   Boolean   @default(false) @map("is_emergency")
+  isClosed      Boolean   @default(false) @map("is_closed")
+  closedAt      DateTime? @map("closed_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  traveler      User      @relation("ConversationTraveler", fields: [travelerId], references: [id], onDelete: Restrict)
+  concierge     User?     @relation("ConversationConcierge", fields: [conciergeId], references: [id], onDelete: Restrict)
+  booking       Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  messages      Message[]
+
+  @@index([travelerId])
+  @@index([conciergeId])
+  @@index([bookingId])
+  @@index([isEmergency])
+  @@index([isClosed])
+  @@map("conversations")
+}
+
+/// Individual message within a conversation.
+model Message {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+  senderId        String   @map("sender_id") @db.Uuid
+  content         String
+  attachments     String[]
+  isRead          Boolean  @default(false) @map("is_read")
+  readAt          DateTime? @map("read_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  sender          User         @relation(fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOMAIN 6 — Moderation & Audit
+// ═══════════════════════════════════════════════════════════
+
+/// Review left by a traveler after a completed booking.
+model Review {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId   String       @unique @map("booking_id") @db.Uuid
+  authorId    String       @map("author_id") @db.Uuid
+  providerId  String       @map("provider_id") @db.Uuid
+  rating      Int          // 1–5
+  title       String?
+  content     String?
+  status      ReviewStatus @default(published)
+  moderatedBy String?      @map("moderated_by") @db.Uuid
+  moderatedAt DateTime?    @map("moderated_at") @db.Timestamptz
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  version     Int          @default(1)
+
+  // Relations
+  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  author      User         @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  provider    Provider     @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@index([providerId])
+  @@index([authorId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("reviews")
+}
+
+/// Audit log for security and business-significant actions.
+model AuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId     String?  @map("actor_id") @db.Uuid
+  actorRole   String?  @map("actor_role")
+  action      String
+  resource    String
+  resourceId  String?  @map("resource_id")
+  requestId   String?  @map("request_id")
+  ipAddress   String?  @map("ip_address")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  actor       User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

@@ -1,0 +1,21 @@
+{
+  "name": "salone-travel-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Salone Travel Concierge Platform Root Workspace",
+  "scripts": {
+    "dev": "npm --prefix backend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "test": "npm --prefix backend test",
+    "test:unit": "npm --prefix backend run test:unit",
+    "test:api": "npm --prefix backend run test:api",
+    "typecheck": "npm --prefix backend run typecheck",
+    "typecheck:frontend": "npm --prefix frontend run typecheck",
+    "prisma:studio": "npm --prefix backend run prisma:studio",
+    "prisma:migrate": "npm --prefix backend run prisma:migrate",
+    "prisma:seed": "npm --prefix backend run prisma:seed"
+  }
+}

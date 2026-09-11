@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: salone-travel-postgres
+    environment:
+      POSTGRES_USER: salone
+      POSTGRES_PASSWORD: salone_dev_password
+      POSTGRES_DB: salone_travel
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U salone -d salone_travel']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  postgres-test:
+    image: postgis/postgis:15-3.4
+    container_name: salone-travel-postgres-test
+    environment:
+      POSTGRES_USER: salone_test
+      POSTGRES_PASSWORD: salone_test_password
+      POSTGRES_DB: salone_travel_test
+    ports:
+      - '5433:5432'
+    volumes:
+      - ./scripts/init-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U salone_test -d salone_travel_test']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: salone-travel-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

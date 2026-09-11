@@ -1,0 +1,314 @@
+{
+  "info": {
+    "name": "Salone Travel Concierge Platform API (Complete Suite - Phases 1, 2, 3)",
+    "_postman_id": "salone-travel-platform-v3",
+    "description": "Complete Postman collection for Salone Travel Concierge Platform covering Auth, Destinations, Providers, Services, Documents, Bookings, Payments, Webhooks, Refunds, Conversations, Realtime Chat, Reviews, and Admin Operations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/v1", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "bookingId", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" },
+    { "key": "conversationId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & Identity",
+      "item": [
+        {
+          "name": "Register Traveler",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alex.traveler@example.com\",\n  \"password\": \"SecureP@ssw0rd!\",\n  \"fullName\": \"Alex Traveler\",\n  \"phone\": \"+23276123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alex.traveler@example.com\",\n  \"password\": \"SecureP@ssw0rd!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Refresh Session",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Destinations Catalog",
+      "item": [
+        {
+          "name": "List & Search Destinations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/destinations?category=beach&near=8.4657,-13.2317,25&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["destinations"],
+              "query": [
+                { "key": "category", "value": "beach" },
+                { "key": "near", "value": "8.4657,-13.2317,25" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Destination by Slug",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/destinations/lumley-beach", "host": ["{{baseUrl}}"], "path": ["destinations", "lumley-beach"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Provider & Services",
+      "item": [
+        {
+          "name": "Create Provider Profile (Upgrade Role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Banana Island Eco Adventures\",\n  \"category\": \"tour_guide\",\n  \"description\": \"Historical and marine tours in Sierra Leone\",\n  \"phone\": \"+23276555123\",\n  \"address\": \"Dublin Village\",\n  \"city\": \"Banana Islands\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/providers", "host": ["{{baseUrl}}"], "path": ["providers"] }
+          }
+        },
+        {
+          "name": "Create Service Listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Full-Day Historical Island Tour\",\n  \"type\": \"tour\",\n  \"priceCents\": 7500,\n  \"currency\": \"USD\",\n  \"durationMinutes\": 480,\n  \"maxCapacity\": 8\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/providers/me/services", "host": ["{{baseUrl}}"], "path": ["providers", "me", "services"] }
+          }
+        },
+        {
+          "name": "Submit for Verification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/providers/me/submit", "host": ["{{baseUrl}}"], "path": ["providers", "me", "submit"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Bookings & Lifecycle",
+      "item": [
+        {
+          "name": "Create Booking Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Idempotency-Key", "value": "req-booking-12345" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"providerId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"serviceId\": \"550e8400-e29b-41d4-a716-446655440001\",\n  \"scheduledDate\": \"2026-11-15T09:00:00.000Z\",\n  \"guestCount\": 2\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+          }
+        },
+        {
+          "name": "Provider Accept Booking",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}/accept", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}", "accept"] }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Flight reschedule\"\n}" },
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}/cancel", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Payments & Stripe Webhooks",
+      "item": [
+        {
+          "name": "Create PaymentIntent (Traveler)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Idempotency-Key", "value": "pay-intent-12345" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{bookingId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payments/intents", "host": ["{{baseUrl}}"], "path": ["payments", "intents"] }
+          }
+        },
+        {
+          "name": "Get Payment Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/payments/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["payments", "{{paymentId}}"] }
+          }
+        },
+        {
+          "name": "Simulate Stripe Webhook (Succeeded)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Stripe-Signature", "value": "t=1700000000,v1=mock_signature" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_mock_success_123\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_mock_123\",\n      \"amount\": 15000,\n      \"currency\": \"usd\"\n    }\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payments/webhooks/stripe", "host": ["{{baseUrl}}"], "path": ["payments", "webhooks", "stripe"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Refunds",
+      "item": [
+        {
+          "name": "Initiate Refund (Concierge/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountCents\": 7500,\n  \"reason\": \"service_failure\",\n  \"notes\": \"Weather cancellation\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payments/{{paymentId}}/refund", "host": ["{{baseUrl}}"], "path": ["payments", "{{paymentId}}", "refund"] }
+          }
+        },
+        {
+          "name": "List Refunds (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/refunds", "host": ["{{baseUrl}}"], "path": ["admin", "refunds"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Concierge Conversations & Messaging",
+      "item": [
+        {
+          "name": "Create Conversation (Traveler)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"subject\": \"Airport transfer clarification\",\n  \"initialMessage\": \"Hi, is child seating available in the van?\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/conversations", "host": ["{{baseUrl}}"], "path": ["conversations"] }
+          }
+        },
+        {
+          "name": "Concierge Inbox",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/conversations/inbox?filter=unclaimed", "host": ["{{baseUrl}}"], "path": ["conversations", "inbox"], "query": [{ "key": "filter", "value": "unclaimed" }] }
+          }
+        },
+        {
+          "name": "Concierge Claim Conversation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/conversations/{{conversationId}}/assign", "host": ["{{baseUrl}}"], "path": ["conversations", "{{conversationId}}", "assign"] }
+          }
+        },
+        {
+          "name": "Concierge Flag Emergency",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Medical assistance required at hotel\"\n}" },
+            "url": { "raw": "{{baseUrl}}/conversations/{{conversationId}}/emergency", "host": ["{{baseUrl}}"], "path": ["conversations", "{{conversationId}}", "emergency"] }
+          }
+        },
+        {
+          "name": "Get Conversation Messages",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/conversations/{{conversationId}}/messages?limit=50", "host": ["{{baseUrl}}"], "path": ["conversations", "{{conversationId}}", "messages"], "query": [{ "key": "limit", "value": "50" }] }
+          }
+        },
+        {
+          "name": "Send Message (HTTP Fallback)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Yes, we have standard child safety seats installed.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/conversations/{{conversationId}}/messages", "host": ["{{baseUrl}}"], "path": ["conversations", "{{conversationId}}", "messages"] }
+          }
+        }
+      ]
+    }
+  ]
+}
