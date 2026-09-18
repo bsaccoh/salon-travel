@@ -1,4 +1,4 @@
-import { UserStatus, UserRole, ProviderStatus, PaymentStatus, Prisma, ServiceType, DestinationCategory } from '@prisma/client';
+import { UserStatus, UserRole, ProviderCategory, ProviderStatus, PaymentStatus, Prisma, ServiceType, DestinationCategory } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { NotFoundError } from '../../common/errors';
 import { buildPaginationArgs, paginateResults } from '../../common/pagination';
@@ -325,6 +325,80 @@ export class AdminService {
       todaysBookings,
     };
   }
+  async listAllServices(filters: { type?: string; search?: string; limit?: number }) {
+    const { type, search, limit = 50 } = filters;
+    const where: Prisma.ServiceWhereInput = {
+      deletedAt: null,
+      ...(type ? { type: type as ServiceType } : {}),
+      ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
+    };
+    return prisma.service.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { provider: { select: { id: true, businessName: true, slug: true } } },
+    });
+  }
+
+  async createAdminService(data: {
+    providerId: string;
+    name: string;
+    type: ServiceType;
+    description?: string;
+    shortDescription?: string;
+    priceCents: number;
+    currency?: string;
+    durationMinutes?: number;
+    maxCapacity?: number;
+    images?: string[];
+    inclusions?: string[];
+    exclusions?: string[];
+    isActive?: boolean;
+  }) {
+    const provider = await prisma.provider.findUnique({ where: { id: data.providerId } });
+    if (!provider) throw new NotFoundError('Provider not found');
+    return prisma.service.create({
+      data: {
+        ...data,
+        currency: data.currency || 'SLE',
+        images: data.images || [],
+        inclusions: data.inclusions || [],
+        exclusions: data.exclusions || [],
+        isActive: data.isActive ?? true,
+      },
+      include: { provider: { select: { id: true, businessName: true, slug: true } } },
+    });
+  }
+
+  async updateAdminService(id: string, data: Partial<{
+    name: string;
+    type: ServiceType;
+    description: string;
+    shortDescription: string;
+    priceCents: number;
+    currency: string;
+    durationMinutes: number;
+    maxCapacity: number;
+    images: string[];
+    inclusions: string[];
+    exclusions: string[];
+    isActive: boolean;
+  }>) {
+    const existing = await prisma.service.findFirst({ where: { id, deletedAt: null } });
+    if (!existing) throw new NotFoundError('Service not found');
+    return prisma.service.update({
+      where: { id },
+      data,
+      include: { provider: { select: { id: true, businessName: true, slug: true } } },
+    });
+  }
+
+  async deleteAdminService(id: string) {
+    const existing = await prisma.service.findFirst({ where: { id, deletedAt: null } });
+    if (!existing) throw new NotFoundError('Service not found');
+    await prisma.service.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
   async seedDemoData() {
     const [destCount, svcCount] = await Promise.all([
       prisma.destination.count(),
@@ -349,10 +423,39 @@ export class AdminService {
     }
 
     if (svcCount === 0) {
-      const provider = await prisma.provider.findFirst({
+      let provider = await prisma.provider.findFirst({
         where: { status: { in: [ProviderStatus.approved, ProviderStatus.listed] } },
         orderBy: { createdAt: 'asc' },
       });
+
+      if (!provider) {
+        const DEMO_EMAIL = 'demo-provider@salone-travel.sl';
+        let demoUser = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+        if (!demoUser) {
+          demoUser = await prisma.user.create({
+            data: {
+              email: DEMO_EMAIL,
+              fullName: 'Salone Eco Adventures',
+              role: UserRole.provider,
+              status: UserStatus.active,
+              passwordHash: '',
+            },
+          });
+        }
+        const existingProvider = await prisma.provider.findUnique({ where: { userId: demoUser.id } });
+        provider = existingProvider ?? await prisma.provider.create({
+          data: {
+            userId: demoUser.id,
+            businessName: 'Salone Eco Adventures',
+            slug: 'salone-eco-adventures',
+            category: ProviderCategory.tour_operator,
+            status: ProviderStatus.listed,
+            description: 'Premier eco-tourism operator offering authentic Sierra Leone travel experiences.',
+            city: 'Freetown',
+            region: 'Western Area',
+          },
+        });
+      }
 
       if (provider) {
         const services = [

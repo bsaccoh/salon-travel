@@ -136,6 +136,41 @@ export class AdminController {
     }
   };
 
+  listAllServices = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { type, search, limit } = req.query as Record<string, string>;
+      const services = await this.service.listAllServices({
+        type,
+        search,
+        limit: limit ? Number(limit) : undefined,
+      });
+      sendSuccess(res, services);
+    } catch (err) { next(err); }
+  };
+
+  createAdminService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const service = await this.service.createAdminService(req.body);
+      sendSuccess(res, service, 201);
+    } catch (err) { next(err); }
+  };
+
+  updateAdminService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const service = await this.service.updateAdminService(id, req.body);
+      sendSuccess(res, service);
+    } catch (err) { next(err); }
+  };
+
+  deleteAdminService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      await this.service.deleteAdminService(id);
+      sendNoContent(res);
+    } catch (err) { next(err); }
+  };
+
   seedDemoData = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await this.service.seedDemoData();

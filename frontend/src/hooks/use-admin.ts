@@ -111,6 +111,55 @@ export function useAdminRefunds(filters?: AdminFilters) {
   });
 }
 
+interface AdminServiceFilters { type?: string; search?: string; limit?: number; }
+
+export function useAdminServices(filters?: AdminServiceFilters) {
+  const params = new URLSearchParams();
+  if (filters?.type) params.set('type', filters.type);
+  if (filters?.search) params.set('search', filters.search);
+  if (filters?.limit) params.set('limit', String(filters.limit));
+  const qs = params.toString();
+  return useQuery({
+    queryKey: ['admin', 'services', filters],
+    queryFn: () => apiClient.get<any[]>(`/admin/services${qs ? `?${qs}` : ''}`),
+    select: (res) => res.data,
+  });
+}
+
+export function useAdminCreateService() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => apiClient.post<any>('/admin/services', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'services'] });
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
+}
+
+export function useAdminUpdateService() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: Record<string, unknown> & { id: string }) =>
+      apiClient.patch<any>(`/admin/services/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'services'] });
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
+}
+
+export function useAdminDeleteService() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/admin/services/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'services'] });
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
+}
+
 export function useAdminSeedDemoData() {
   const queryClient = useQueryClient();
   return useMutation({

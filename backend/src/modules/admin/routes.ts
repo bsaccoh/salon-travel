@@ -180,7 +180,14 @@ adminRoutes.post(
   conversationController.adminReassign,
 );
 
-// ── 7. Demo Data Seeding (admin only) ─────────────────
+// ── 7. Admin Service/Package Management ───────────────────
+
+adminRoutes.get('/services', adminController.listAllServices);
+adminRoutes.post('/services', authorize('admin'), adminController.createAdminService);
+adminRoutes.patch('/services/:id', authorize('admin'), adminController.updateAdminService);
+adminRoutes.delete('/services/:id', authorize('admin'), adminController.deleteAdminService);
+
+// ── 8. Demo Data Seeding (admin only) ─────────────────
 
 adminRoutes.post(
   '/seed-demo-data',
