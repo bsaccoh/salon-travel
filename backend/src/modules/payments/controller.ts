@@ -41,6 +41,23 @@ export class PaymentController {
     }
   };
 
+  simulatePayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (process.env.STRIPE_SECRET_KEY) {
+        res.status(403).json({ error: 'Simulate endpoint is disabled when Stripe is configured.' });
+        return;
+      }
+      const travelerId = req.user!.userId;
+      const { bookingId } = req.body as { bookingId: string };
+      const context = AuditService.contextFromRequest(req);
+
+      const result = await this.service.simulatePayment(travelerId, bookingId, context);
+      sendCreated(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;

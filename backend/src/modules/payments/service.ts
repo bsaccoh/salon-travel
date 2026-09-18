@@ -410,6 +410,91 @@ export class PaymentService {
     return { received: true };
   }
 
+  async simulatePayment(
+    travelerId: string,
+    bookingId: string,
+    context: AuditContext,
+  ): Promise<{ paymentId: string; bookingId: string; status: string }> {
+    const booking = await this.bookingRepo.findById(bookingId);
+    if (!booking) throw new NotFoundError('Booking', bookingId);
+    if (booking.travelerId !== travelerId) throw new NotFoundError('Booking', bookingId);
+
+    if (booking.status !== BookingStatus.accepted && booking.status !== BookingStatus.awaiting_payment) {
+      throw new ConflictError(
+        `Booking in '${booking.status}' status is not eligible for simulated payment`,
+        'INVALID_PAYMENT_STATE',
+      );
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await this.repo.findByBookingId(bookingId);
+      let payment;
+
+      if (existing && existing.status === PaymentStatus.succeeded) {
+        throw new ConflictError('This booking has already been paid for', 'BOOKING_ALREADY_PAID');
+      }
+
+      if (existing) {
+        payment = await this.repo.updateStatus(
+          existing.id,
+          { status: PaymentStatus.succeeded, paidAt: new Date() },
+          tx,
+        );
+      } else {
+        payment = await this.repo.create(
+          {
+            bookingId: booking.id,
+            stripePaymentIntentId: `sim_${booking.id.slice(0, 8)}_${Date.now()}`,
+            status: PaymentStatus.succeeded,
+            amountCents: booking.totalCents,
+            currency: 'sle',
+            paidAt: new Date(),
+            metadata: { simulated: true },
+          },
+          tx,
+        );
+      }
+
+      // Transition booking straight to confirmed
+      BookingStateMachine.validateTransition({
+        fromStatus: booking.status,
+        toStatus: BookingStatus.confirmed,
+        actorRole: 'system',
+      });
+
+      await this.bookingRepo.updateStatusWithLock(
+        booking.id,
+        booking.version,
+        { status: BookingStatus.confirmed, confirmedAt: new Date() },
+        tx,
+      );
+
+      await this.bookingRepo.createEvent(
+        {
+          bookingId: booking.id,
+          fromStatus: booking.status,
+          toStatus: BookingStatus.confirmed,
+          actorId: travelerId,
+          actorRole: null as any,
+          reason: 'Simulated payment (test mode)',
+          metadata: { simulated: true },
+        },
+        tx,
+      );
+
+      await auditService.logInTransaction(tx, context, {
+        action: 'PAYMENT_SIMULATED',
+        resource: 'payment',
+        resourceId: payment.id,
+        metadata: { bookingId, amountCents: booking.totalCents, simulated: true },
+      });
+
+      return payment;
+    });
+
+    return { paymentId: result.id, bookingId, status: 'confirmed' };
+  }
+
   async getPaymentById(id: string) {
     const payment = await this.repo.findById(id);
     if (!payment) {

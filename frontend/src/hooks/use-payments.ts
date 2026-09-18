@@ -39,3 +39,10 @@ export function useCreatePaymentIntent() {
       }),
   });
 }
+
+export function useSimulatePayment() {
+  return useMutation({
+    mutationFn: (data: { bookingId: string }) =>
+      apiClient.post<{ paymentId: string; bookingId: string; status: string }>('/payments/simulate', data),
+  });
+}

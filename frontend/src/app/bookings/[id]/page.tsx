@@ -15,7 +15,7 @@ import { BookingStatusBadge } from '@/components/ui/booking-status-badge';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useBooking, useCancelBooking } from '@/hooks/use-bookings';
-import { useCreatePaymentIntent } from '@/hooks/use-payments';
+import { useCreatePaymentIntent, useSimulatePayment } from '@/hooks/use-payments';
 import { apiClient } from '@/lib/api-client';
 import {
   Calendar,
@@ -121,6 +121,7 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
   const { data: remoteBooking, isLoading, refetch } = useBooking(bookingId);
   const cancelBookingMutation = useCancelBooking();
   const createPaymentIntent = useCreatePaymentIntent();
+  const simulatePayment = useSimulatePayment();
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -545,12 +546,39 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
             <p className="text-xs text-text-muted">Preparing secure checkout…</p>
           </div>
         ) : clientSecret === '__no_stripe_key__' ? (
-          <div className="space-y-4 text-center py-6">
-            <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl text-sm text-warning-dark">
-              <p className="font-bold mb-1">Stripe not configured</p>
-              <p className="text-xs">Set <code className="bg-black/10 px-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> in your Render frontend environment to enable real payments.</p>
+          <div className="space-y-5">
+            <div className="p-4 rounded-xl bg-background border border-border flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-text">Total Amount</p>
+                <p className="text-xs text-text-muted">Test mode — no real charge</p>
+              </div>
+              <span className="text-xl font-extrabold text-primary-dark">
+                Le {(booking.totalCents / 100).toLocaleString()}
+              </span>
             </div>
-            <Button variant="outline" onClick={() => setIsPaymentModalOpen(false)}>Close</Button>
+            <div className="p-3 rounded-lg bg-warning/10 border border-warning/20 text-warning-dark text-xs font-semibold text-center">
+              ⚠ Test Mode — Stripe not configured. Payment will be simulated.
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setIsPaymentModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="traveler-cta"
+                className="flex-1 font-bold"
+                isLoading={simulatePayment.isPending}
+                onClick={async () => {
+                  try {
+                    await simulatePayment.mutateAsync({ bookingId: booking.id });
+                    handlePaymentSuccess();
+                  } catch (err: any) {
+                    // error shown via modal state — surface in toast if needed
+                  }
+                }}
+              >
+                Confirm Test Payment
+              </Button>
+            </div>
           </div>
         ) : stripePromise ? (
           <Elements
@@ -567,12 +595,9 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
             />
           </Elements>
         ) : (
-          <div className="space-y-4 text-center py-6">
-            <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl text-sm text-warning-dark">
-              <p className="font-bold mb-1">Stripe not configured</p>
-              <p className="text-xs">Add <code className="bg-black/10 px-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to your environment variables.</p>
-            </div>
-            <Button variant="outline" onClick={() => setIsPaymentModalOpen(false)}>Close</Button>
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-xs text-text-muted">Preparing checkout…</p>
           </div>
         )}
       </Modal>

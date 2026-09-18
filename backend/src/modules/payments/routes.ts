@@ -15,6 +15,14 @@ paymentRoutes.post(
   paymentController.handleWebhook,
 );
 
+// Test-mode payment simulation (disabled when STRIPE_SECRET_KEY is set)
+paymentRoutes.post(
+  '/simulate',
+  authenticate,
+  rateLimit('PAYMENT'),
+  paymentController.simulatePayment,
+);
+
 // PaymentIntent Creation for Traveler (Authenticated & Idempotent)
 paymentRoutes.post(
   '/intents',
