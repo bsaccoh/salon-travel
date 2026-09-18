@@ -16,6 +16,17 @@
     --color-background: #F7FAFA;
     --color-surface: #FFFFFF;
     --color-border: #E5ECEE;
+
+    /* Landing page brand */
+    --brand-green: #1B8A4A;
+    --brand-green-dark: #15713D;
+    --brand-green-light: #E8F5EC;
+    --brand-blue: #1565C0;
+    --brand-blue-light: #E3F2FD;
+    --brand-navy: #0E2A47;
+    --brand-navy-light: #1A3A5C;
+    --brand-coral: #EE6C4D;
+    --brand-sand: #F2B84B;
   }
 
   body {

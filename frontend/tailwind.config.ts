@@ -10,6 +10,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          navy: '#063B63',
+          navyLight: '#0A4775',
+          green: '#168B55',
+          greenLight: '#39C96B',
+          greenMuted: '#DDF5E9',
+          action: '#169B5B',
+          softBg: '#F4FAFC',
+          textPrimary: '#0B3554',
+          textSecondary: '#637A8C',
+          border: '#DCE7EC',
+        },
         primary: {
           dark: '#0E4C5B',
           DEFAULT: '#1C8FA6',

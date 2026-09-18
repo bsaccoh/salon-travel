@@ -1,66 +1,63 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { SearchBar } from './search-bar';
-import { cn } from '@/lib/utils';
-
-const BACKGROUND_IMAGES = [
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2200&q=85',
-  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=2200&q=85',
-  'https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=2200&q=85',
-];
 
 export function TravelerHero() {
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((current) => (current + 1) % BACKGROUND_IMAGES.length);
-    }, 5000); // Change image every 5 seconds
-    
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <section className="relative w-full h-screen min-h-[700px] flex items-center justify-center text-white overflow-hidden -mt-20">
-      {/* Full-bleed Panoramic Background Image Carousel */}
-      <div className="absolute inset-0 z-0 overflow-hidden bg-primary-dark">
-        {BACKGROUND_IMAGES.map((src, index) => (
-          <Image
-            key={src}
-            src={src}
-            alt="Sierra Leone Scenic View"
-            fill
-            priority={index === 0}
-            sizes="100vw"
-            className={cn(
-              "object-cover object-center scale-100 transition-opacity duration-1000 ease-in-out",
-              index === activeIndex ? "opacity-100" : "opacity-0"
-            )}
-          />
-        ))}
-        {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-black/40 z-10" />
+    <section className="relative w-full h-[550px] md:h-[528px] mb-[260px] md:mb-0">
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="https://images.unsplash.com/photo-1611395813517-41f9be5e292d?auto=format&fit=crop&w=2400&q=80"
+          alt="Aerial view of the turquoise waters and white sand of Tokeh Beach, Sierra Leone"
+          fill
+          priority
+          className="object-cover"
+          style={{ objectPosition: 'center 50%' }}
+        />
+        {/* Directional overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(90deg, rgba(4,43,68,0.55) 0%, rgba(4,43,68,0.30) 45%, rgba(4,43,68,0.08) 100%)',
+          }}
+        />
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 text-center flex flex-col items-center mt-10">
+      <div className="relative z-20 w-full h-full max-w-[1280px] mx-auto px-4 sm:px-[5%] lg:px-[7%]">
+        <div className="pt-[55px] sm:pt-[71px] max-w-full sm:max-w-[570px] text-left">
+          {/* Eyebrow */}
+          <div className="flex items-center gap-[13px] mb-[27px]">
+            <span className="text-[12px] font-bold uppercase tracking-[1.9px] text-white">
+              Salone Travel
+            </span>
+            <div className="h-[2px] w-12 bg-brand-greenLight shrink-0" />
+          </div>
 
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tighter leading-[1.2] text-white drop-shadow-lg mb-8 uppercase animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-          Discover The True Beauty Of <br className="hidden md:block" />
-          <span className="text-warning">Sierra Leone</span>
-        </h1>
+          {/* Heading */}
+          <h1 className="text-[38px] sm:text-[54px] lg:text-[61px] leading-[1.11] font-extrabold tracking-[-1.2px] sm:tracking-[-2.4px] text-white">
+            Discover the True<br />
+            Beauty<br />
+            of <span className="text-brand-greenLight">Sierra Leone</span>
+          </h1>
 
-        <p className="text-lg sm:text-xl text-white/90 max-w-3xl font-medium leading-relaxed drop-shadow-md mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-          Experience the untouched beauty of West Africa. Book verified local guides, pristine island escapes, and authentic cultural tours with complete confidence.
-        </p>
+          {/* Description */}
+          <p className="mt-[27px] max-w-full sm:max-w-[560px] text-[15px] sm:text-[17px] text-white leading-[1.85] font-normal">
+            Explore stunning islands, pristine beaches, rich culture, and
+            unforgettable experiences. Your next adventure starts here.
+          </p>
+        </div>
+      </div>
 
-        {/* Floating Overlapping Search Bar */}
-        <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
+      {/* Floating Search Bar overlapping the bottom */}
+      <div className="absolute left-0 right-0 -bottom-[260px] md:-bottom-[40px] z-30 px-4 sm:px-[5%] lg:px-[7%]">
+        <div className="max-w-[1270px] mx-auto">
           <SearchBar />
         </div>
       </div>
     </section>
   );
 }
-

@@ -1,0 +1,47 @@
+services:
+  # Redis for background jobs and websockets
+  - type: redis
+    name: salone-travel-redis
+    ipAllowList: [] # Adjust as needed
+    plan: free # Change to starter/pro for production
+
+  # Backend Node.js API Server
+  - type: web
+    name: salone-travel-backend
+    env: node
+    region: ohio # Default US East, change to your preference
+    buildCommand: npm --prefix backend install && npm --prefix backend run prisma:generate && npm --prefix backend run build && npm --prefix backend run prisma:migrate:deploy
+    startCommand: npm --prefix backend start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false # You must set this manually in the Render dashboard from Neon
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: salone-travel-redis
+          property: connectionString
+      - key: JWT_SIGNING_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://salone-travel-frontend.onrender.com # Update to your frontend URL
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: REFRESH_TOKEN_TTL
+        value: 30d
+
+  # Frontend Next.js Application
+  - type: web
+    name: salone-travel-frontend
+    env: node
+    region: ohio # Keep same as backend
+    buildCommand: npm --prefix frontend install && npm --prefix frontend run build
+    startCommand: npm --prefix frontend start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://salone-travel-backend.onrender.com/v1 # This matches the backend service above

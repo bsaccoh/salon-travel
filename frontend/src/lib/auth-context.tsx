@@ -15,9 +15,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+import { useRouter, usePathname } from 'next/navigation';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const refreshUser = async () => {
     try {
@@ -38,7 +42,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshUser();
-  }, []);
+
+    apiClient.onUnauthorized = () => {
+      setUser(null);
+      if (typeof window !== 'undefined' && !pathname?.startsWith('/auth/')) {
+        router.push('/auth/login');
+      }
+    };
+  }, [router, pathname]);
 
   const login = async (email: string, password: string): Promise<User> => {
     const res = await apiClient.post<{ user: User; tokens: { accessToken: string; refreshToken: string } }>(

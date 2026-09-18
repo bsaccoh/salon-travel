@@ -7,6 +7,7 @@ class ApiClient {
   private refreshToken: string | null = null;
   private isRefreshing = false;
   private refreshSubscribers: ((token: string) => void)[] = [];
+  public onUnauthorized?: () => void;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -30,6 +31,9 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('salone_access_token');
       localStorage.removeItem('salone_refresh_token');
+    }
+    if (this.onUnauthorized) {
+      this.onUnauthorized();
     }
   }
 

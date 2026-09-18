@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Button } from '@/components/ui/button';
 import {
-  Compass,
   Menu,
   X,
   User as UserIcon,
@@ -14,303 +13,163 @@ import {
   LogOut,
   LayoutDashboard,
   Shield,
-  Bell,
+  Globe,
+  ChevronDown,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function TravelerHeader() {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const navLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'Destinations', href: '/destinations' },
+    { label: 'Packages', href: '/packages' },
+    { label: 'Providers', href: '/providers' },
+    { label: 'Experiences', href: '/#experiences' },
+    { label: 'How It Works', href: '/#how-it-works' },
+  ];
 
   return (
-    <header 
-      className={cn(
-        "fixed top-0 w-full z-50 transition-all duration-300",
-        scrolled 
-          ? "bg-surface/95 backdrop-blur-md border-b border-border/80 shadow-sm py-0" 
-          : "bg-transparent border-b border-white/10 py-2"
-      )}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-primary-dark flex items-center justify-center text-warning shadow-md group-hover:scale-105 transition-smooth">
-            <Compass className="w-6 h-6" />
+    <header className="relative z-50 w-full bg-white border-b border-[#EDF2F4]">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-[5%] lg:px-[7%] h-[72px] sm:h-[88px] flex items-center justify-between">
+        {/* LEFT: Brand Logo */}
+        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-brand-green flex items-center justify-center text-white shadow-sm group-hover:bg-brand-action transition-colors">
+            <MapPin className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className={cn(
-              "font-extrabold text-xl tracking-tight transition-smooth",
-              scrolled ? "text-primary-dark group-hover:text-primary" : "text-white"
-            )}>
-              Salone<span className="text-accent">Travel</span>
+            <span className="font-extrabold text-lg sm:text-[21px] tracking-[-0.6px] leading-tight text-brand-navy">
+              Salone<span className="text-brand-green">Travel</span>
             </span>
-            <span className={cn(
-              "text-[10px] font-semibold uppercase tracking-widest -mt-1",
-              scrolled ? "text-text-muted" : "text-white/80"
-            )}>
-              Concierge
+            <span className="hidden sm:block text-[7px] font-bold uppercase tracking-[1.7px] mt-[3px] text-brand-navy">
+              Explore • Discover • Experience
             </span>
           </div>
         </Link>
 
-        {/* Center Desktop Navigation */}
-        <nav className={cn(
-          "hidden md:flex items-center gap-8 text-sm font-semibold",
-          scrolled ? "text-text/80" : "text-white/90"
-        )}>
-          <Link
-            href="/destinations"
-            className="hover:text-primary transition-smooth py-1"
-          >
-            Destinations
-          </Link>
-          <Link
-            href="/providers"
-            className="hover:text-primary transition-smooth py-1"
-          >
-            Providers
-          </Link>
-          <Link
-            href="/#experiences"
-            className="hover:text-primary transition-smooth py-1"
-          >
-            Experiences
-          </Link>
-          <Link
-            href="/#how-it-works"
-            className="hover:text-primary transition-smooth py-1"
-          >
-            How It Works
-          </Link>
+        {/* CENTER: Desktop Navigation */}
+        <nav className="hidden lg:flex items-center gap-4 xl:gap-6 h-full text-[14px] xl:text-[15px] font-medium text-brand-navy">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+            return (
+              <Link
+                key={link.label}
+                href={link.href}
+                className={cn(
+                  "relative h-full flex items-center whitespace-nowrap shrink-0 hover:text-brand-green transition-colors",
+                  isActive ? "text-brand-green font-semibold" : ""
+                )}
+              >
+                {link.label}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 w-full h-[2px] bg-brand-green" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Right Authentication CTA */}
-        <div className="hidden md:flex items-center gap-3">
-          {/* Direct Portal Switcher */}
-          <div className="relative group">
-            <button
-              className={cn(
-                "flex items-center gap-1.5 text-xs font-bold py-2 px-2.5 rounded-lg transition-smooth",
-                scrolled ? "text-text-muted hover:text-primary hover:bg-slate-light" : "text-white/90 hover:text-white hover:bg-white/10"
-              )}
-              aria-label="Platform Dashboards"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>Portals</span>
-            </button>
-            <div className="absolute right-0 top-full hidden group-hover:block w-52 p-2 bg-surface rounded-xl shadow-elevated border border-border z-50 animate-in fade-in">
-              <span className="block px-2.5 py-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                Platform Apps
-              </span>
-              <Link
-                href="/"
-                className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth"
-              >
-                <Compass className="w-4 h-4 text-primary" />
-                <span>Traveler PWA</span>
-              </Link>
-              <Link
-                href="/provider"
-                className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth"
-              >
-                <LayoutDashboard className="w-4 h-4 text-green" />
-                <span>Provider Portal</span>
-              </Link>
-              <Link
-                href="/concierge"
-                className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth"
-              >
-                <MessageSquare className="w-4 h-4 text-accent" />
-                <span>Concierge Desk</span>
-              </Link>
-              <Link
-                href="/admin"
-                className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth"
-              >
-                <Shield className="w-4 h-4 text-primary-dark" />
-                <span>Admin Console</span>
-              </Link>
-            </div>
-          </div>
+        {/* RIGHT: Actions */}
+        <div className="hidden lg:flex items-center gap-3 xl:gap-[18px] ml-auto">
+          <button className="flex items-center gap-2 text-sm font-medium text-brand-navy hover:text-brand-green transition-colors">
+            <Globe className="w-[18px] h-[18px]" />
+            <span>EN</span>
+            <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+          </button>
 
           {user ? (
-            <div className="flex items-center gap-3">
-              <Link href="/bookings">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  <span>Bookings</span>
-                </Button>
-              </Link>
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-[9px] h-[46px] pl-2 pr-3.5 rounded-full border border-brand-border bg-white hover:bg-brand-softBg text-brand-navy transition-all"
+              >
+                <div className="w-[30px] h-[30px] rounded-full bg-brand-green text-white flex items-center justify-center font-bold text-[13px]">
+                  {user.fullName?.charAt(0) || 'U'}
+                </div>
+                <span className="text-[13px] font-medium max-w-[100px] truncate">
+                  {user.fullName?.split(' ')[0]}
+                </span>
+              </button>
 
-              <Link href="/messages">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <MessageSquare className="w-4 h-4 text-primary" />
-                  <span>Messages</span>
-                </Button>
-              </Link>
-
-              {/* Notification Bell */}
-              <div className="relative">
-                <button
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className={cn(
-                    "relative p-2 rounded-full transition-smooth",
-                    scrolled ? "text-text hover:bg-slate-light" : "text-white hover:bg-white/10"
-                  )}
+              {dropdownOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-56 rounded-xl border border-brand-border bg-white p-2 shadow-elevated z-50 animate-in fade-in"
+                  onClick={() => setDropdownOpen(false)}
                 >
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-accent border-2 border-surface"></span>
-                </button>
-                
-                {notificationsOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-72 rounded-xl border border-border bg-surface shadow-elevated z-50 animate-in fade-in"
-                  >
-                    <div className="px-4 py-3 border-b border-border flex justify-between items-center">
-                      <span className="text-sm font-bold text-text">Notifications</span>
-                      <button className="text-xs text-primary font-semibold hover:underline">Mark all read</button>
-                    </div>
-                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                      <div className="p-3 border-b border-border hover:bg-slate-light transition-smooth cursor-pointer">
-                        <div className="flex gap-3">
-                          <div className="w-8 h-8 rounded-full bg-success-light text-success flex items-center justify-center shrink-0">
-                            <Calendar className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-text font-semibold">Booking Confirmed</p>
-                            <p className="text-xs text-text-muted mt-0.5">Your Banana Island Adventure is confirmed.</p>
-                            <p className="text-[10px] text-text-muted mt-1 font-semibold">2m ago</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-2 border-t border-border text-center">
-                      <Link href="/notifications" className="text-xs font-bold text-primary hover:underline" onClick={() => setNotificationsOpen(false)}>
-                        View All
-                      </Link>
-                    </div>
+                  <div className="px-3 py-2 border-b border-brand-border/50">
+                    <p className="text-xs font-bold text-brand-textPrimary truncate">{user.fullName}</p>
+                    <p className="text-[11px] text-brand-textSecondary truncate">{user.email}</p>
+                    <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-greenMuted text-brand-green">
+                      {user.role}
+                    </span>
                   </div>
-                )}
-              </div>
 
-              {/* User Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className={cn(
-                    "flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border transition-smooth",
-                    scrolled ? "border-border bg-surface hover:bg-slate-light" : "border-white/20 bg-black/20 hover:bg-white/10"
-                  )}
-                >
-                  <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
-                    {user.fullName?.charAt(0) || 'U'}
-                  </div>
-                  <span className={cn(
-                    "text-xs font-semibold max-w-[100px] truncate",
-                    scrolled ? "text-text" : "text-white"
-                  )}>
-                    {user.fullName?.split(' ')[0]}
-                  </span>
-                </button>
-
-                {dropdownOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-surface p-2 shadow-elevated z-50 animate-in fade-in"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    <div className="px-3 py-2 border-b border-border/50">
-                      <p className="text-xs font-bold text-text truncate">{user.fullName}</p>
-                      <p className="text-[11px] text-text-muted truncate">{user.email}</p>
-                      <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary-light text-primary">
-                        {user.role}
-                      </span>
-                    </div>
-
-                    {user.role === 'provider' && (
-                      <Link
-                        href="/provider"
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth mt-1"
-                      >
-                        <LayoutDashboard className="w-4 h-4 text-primary" />
-                        <span>Provider Dashboard</span>
-                      </Link>
-                    )}
-
-                    {(user.role === 'concierge' || user.role === 'admin') && (
-                      <Link
-                        href="/concierge"
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth mt-1"
-                      >
-                        <Shield className="w-4 h-4 text-primary" />
-                        <span>Concierge Inbox</span>
-                      </Link>
-                    )}
-
-                    {user.role === 'admin' && (
-                      <Link
-                        href="/admin"
-                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth"
-                      >
-                        <LayoutDashboard className="w-4 h-4 text-primary-dark" />
-                        <span>Admin Console</span>
-                      </Link>
-                    )}
-
-                    <Link
-                      href="/profile"
-                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-text hover:bg-slate-light rounded-lg transition-smooth"
-                    >
-                      <UserIcon className="w-4 h-4 text-text-muted" />
-                      <span>My Profile</span>
+                  {user.role === 'provider' && (
+                    <Link href="/provider" className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-brand-textPrimary hover:bg-brand-softBg rounded-lg transition-colors mt-1">
+                      <LayoutDashboard className="w-4 h-4 text-brand-green" />
+                      <span>Provider Dashboard</span>
                     </Link>
+                  )}
+                  {(user.role === 'concierge' || user.role === 'admin') && (
+                    <Link href="/concierge" className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-brand-textPrimary hover:bg-brand-softBg rounded-lg transition-colors mt-1">
+                      <MessageSquare className="w-4 h-4 text-brand-green" />
+                      <span>Concierge Inbox</span>
+                    </Link>
+                  )}
+                  {user.role === 'admin' && (
+                    <Link href="/admin" className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-brand-textPrimary hover:bg-brand-softBg rounded-lg transition-colors">
+                      <Shield className="w-4 h-4 text-brand-navy" />
+                      <span>Admin Console</span>
+                    </Link>
+                  )}
 
-                    <button
-                      type="button"
-                      onClick={() => logout('/')}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger-light rounded-lg transition-smooth text-left mt-1 border-t border-border/50 cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                  <Link href="/bookings" className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-brand-textPrimary hover:bg-brand-softBg rounded-lg transition-colors">
+                    <Calendar className="w-4 h-4 text-brand-textSecondary" />
+                    <span>My Bookings</span>
+                  </Link>
+
+                  <Link href="/profile" className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-brand-textPrimary hover:bg-brand-softBg rounded-lg transition-colors">
+                    <UserIcon className="w-4 h-4 text-brand-textSecondary" />
+                    <span>My Profile</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => logout('/')}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left mt-1 border-t border-brand-border/50 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <Link href="/auth/login">
-                <Button
-                  size="md"
-                  className="bg-white hover:bg-slate-50 text-primary-dark font-bold shadow-sm border border-border/60 hover:border-primary/40 transition-smooth"
-                >
+                <button className="h-[46px] px-4 bg-white text-brand-navy font-semibold text-sm rounded-[10px] border border-brand-border shadow-sm hover:bg-gray-50 transition-colors">
                   Sign In
-                </Button>
+                </button>
               </Link>
               <Link href="/auth/register">
-                <Button variant="traveler-cta" size="md">
+                <button className="h-[46px] px-4 bg-brand-green text-white font-semibold text-sm rounded-[10px] hover:bg-brand-action transition-colors">
                   Get Started
-                </Button>
+                </button>
               </Link>
             </div>
           )}
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex lg:hidden items-center gap-2 ml-auto">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-text hover:bg-slate-light"
+            className="p-2 rounded-lg text-brand-textPrimary hover:bg-brand-softBg transition-colors"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -319,83 +178,50 @@ export function TravelerHeader() {
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-border bg-surface px-4 pt-2 pb-6 space-y-3">
-          <Link
-            href="/destinations"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-text hover:text-primary"
-          >
-            Destinations
-          </Link>
-          <Link
-            href="/providers"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-text hover:text-primary"
-          >
-            Providers
-          </Link>
-          <Link
-            href="/#experiences"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-text hover:text-primary"
-          >
-            Experiences
-          </Link>
-          <Link
-            href="/#how-it-works"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base font-semibold text-text hover:text-primary"
-          >
-            How It Works
-          </Link>
+        <div className="lg:hidden border-b border-brand-border bg-white px-4 pt-2 pb-6 space-y-2 shadow-card absolute w-full left-0 top-full">
+          {navLinks.map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2.5 px-2 text-[15px] font-semibold text-brand-textPrimary hover:text-brand-green hover:bg-brand-softBg rounded-lg"
+            >
+              {link.label}
+            </Link>
+          ))}
 
           {user ? (
-            <div className="pt-4 border-t border-border space-y-2">
-              <Link
-                href="/bookings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-sm font-semibold text-text"
-              >
+            <div className="pt-4 border-t border-brand-border space-y-1">
+              <Link href="/bookings" onClick={() => setMobileMenuOpen(false)} className="block py-2.5 px-2 text-sm font-semibold text-brand-textSecondary hover:bg-brand-softBg rounded-lg">
                 My Bookings
               </Link>
-              <Link
-                href="/messages"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-sm font-semibold text-text"
-              >
-                Concierge Messages
+              <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="block py-2.5 px-2 text-sm font-semibold text-brand-textSecondary hover:bg-brand-softBg rounded-lg">
+                My Profile
               </Link>
               {user.role === 'admin' && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block py-2 text-sm font-semibold text-primary-dark"
-                >
+                <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="block py-2.5 px-2 text-sm font-semibold text-brand-navy hover:bg-brand-softBg rounded-lg">
                   Admin Console
                 </Link>
               )}
               <button
                 type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  logout('/');
-                }}
-                className="block w-full text-left py-2 text-sm font-semibold text-danger cursor-pointer"
+                onClick={() => { setMobileMenuOpen(false); logout('/'); }}
+                className="block w-full text-left py-2.5 px-2 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer mt-2 border-t border-brand-border"
               >
                 Sign Out
               </button>
             </div>
           ) : (
-            <div className="pt-4 border-t border-border flex flex-col gap-2.5">
+            <div className="pt-5 border-t border-brand-border flex flex-col gap-3">
               <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" className="w-full">
+                <button className="w-full h-[46px] bg-white text-brand-navy font-semibold text-[15px] rounded-[10px] border border-brand-border shadow-sm">
                   Sign In
-                </Button>
+                </button>
               </Link>
               <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="traveler-cta" className="w-full">
+                <button className="w-full h-[46px] bg-brand-green text-white font-semibold text-[15px] rounded-[10px]">
                   Get Started
-                </Button>
+                </button>
               </Link>
             </div>
           )}
