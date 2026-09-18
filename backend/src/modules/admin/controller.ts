@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { adminService, AdminService } from './service';
 import { sendSuccess, sendCollection, sendNoContent } from '../../common/responses';
 import { AuditService } from '../audit';
-import { ListUsersQuery, UserStatusActionInput } from './schemas';
+import { ListUsersQuery, UserStatusActionInput, CreateUserInput } from './schemas';
 import { ListBookingsQuery } from '../bookings/schemas';
 import { ListReviewsQuery } from '../reviews/schemas';
 
@@ -26,6 +26,16 @@ export class AdminController {
       const user = await this.service.getUserById(id);
 
       sendSuccess(res, user);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  createUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = req.body as CreateUserInput;
+      const user = await this.service.createUser(input);
+      sendSuccess(res, user, 201);
     } catch (err) {
       next(err);
     }

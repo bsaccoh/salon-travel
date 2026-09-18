@@ -11,10 +11,115 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { Search, UserCheck, Ban, Eye, Loader2 } from 'lucide-react';
+import { Search, UserCheck, Ban, Eye, Loader2, UserPlus, X } from 'lucide-react';
 import { ActionDropdown } from '@/components/ui/dropdown';
 import { useAdminUsers, useAdminSuspendUser, useAdminReactivateUser } from '@/hooks/use-admin';
 import { ErrorState } from '@/components/ui/error-state';
+import { apiClient } from '@/lib/api-client';
+
+const ROLES = ['traveler', 'provider', 'concierge', 'admin'] as const;
+
+function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'traveler' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await apiClient.post('/admin/users', form);
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to create user');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-text">Add New User</h2>
+          <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-4 px-4 py-2.5 bg-danger-light text-danger text-sm rounded-lg">{error}</div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-bold text-text-muted mb-1.5">Full Name</label>
+            <input
+              required
+              value={form.fullName}
+              onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-text text-sm focus:outline-none focus:border-primary"
+              placeholder="John Doe"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-text-muted mb-1.5">Email</label>
+            <input
+              required
+              type="email"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-text text-sm focus:outline-none focus:border-primary"
+              placeholder="user@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-text-muted mb-1.5">Password</label>
+            <input
+              required
+              type="password"
+              minLength={8}
+              value={form.password}
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-text text-sm focus:outline-none focus:border-primary"
+              placeholder="Min. 8 characters"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-text-muted mb-1.5">Role</label>
+            <select
+              value={form.role}
+              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-text text-sm focus:outline-none focus:border-primary"
+            >
+              {ROLES.map(r => (
+                <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-3 mt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-border text-text text-sm font-semibold hover:bg-background transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary-dark transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create User'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 const ROLE_FILTERS = [
   { value: '', label: 'All Roles' },
@@ -27,6 +132,7 @@ const ROLE_FILTERS = [
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [showAddUser, setShowAddUser] = useState(false);
   const { data: users, isLoading, error, refetch } = useAdminUsers({
     search: searchQuery || undefined,
     role: roleFilter || undefined,
@@ -38,6 +144,10 @@ export default function AdminUsersPage() {
     <div className="flex min-h-screen bg-background">
       <AdminSidebar />
 
+      {showAddUser && (
+        <AddUserModal onClose={() => setShowAddUser(false)} onSuccess={() => refetch()} />
+      )}
+
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -46,6 +156,13 @@ export default function AdminUsersPage() {
               Audit and manage platform travelers, provider hosts, and concierge staff
             </p>
           </div>
+          <button
+            onClick={() => setShowAddUser(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-dark transition-colors shadow-sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add User
+          </button>
         </div>
 
         <div className="bg-surface rounded-xl p-4 border border-border shadow-subtle mb-6 flex flex-col md:flex-row items-center justify-between gap-4">

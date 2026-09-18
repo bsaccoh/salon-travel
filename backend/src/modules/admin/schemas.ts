@@ -19,3 +19,15 @@ export const userStatusActionSchema = z
   .strict();
 
 export type UserStatusActionInput = z.infer<typeof userStatusActionSchema>;
+
+export const createUserSchema = z
+  .object({
+    email: z.string().email(),
+    fullName: z.string().min(2).max(100),
+    password: z.string().min(8).max(100),
+    role: z.nativeEnum(UserRole).default(UserRole.traveler),
+    phone: z.string().optional(),
+  })
+  .strict();
+
+export type CreateUserInput = z.infer<typeof createUserSchema>;

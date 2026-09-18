@@ -9,7 +9,7 @@ import { validate } from '../../common/middleware/validate';
 import { authenticate } from '../../common/middleware/authenticate';
 import { authorize } from '../../common/middleware/authorize';
 import { rateLimit } from '../../common/middleware/rateLimiter';
-import { listUsersQuerySchema, userStatusActionSchema } from './schemas';
+import { listUsersQuerySchema, userStatusActionSchema, createUserSchema } from './schemas';
 import { listProvidersQuerySchema, adminProviderActionSchema } from '../providers/schemas';
 import { listBookingsQuerySchema } from '../bookings/schemas';
 import { moderateReviewSchema, listReviewsQuerySchema } from '../reviews/schemas';
@@ -102,6 +102,13 @@ adminRoutes.get(
   '/users',
   validate({ query: listUsersQuerySchema }),
   adminController.listUsers,
+);
+
+adminRoutes.post(
+  '/users',
+  authorize('admin'),
+  validate({ body: createUserSchema }),
+  adminController.createUser,
 );
 
 adminRoutes.get(

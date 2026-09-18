@@ -5,7 +5,8 @@ import { buildPaginationArgs, paginateResults } from '../../common/pagination';
 import { auditService, AuditContext } from '../audit';
 import { authRepository } from '../auth/auth.repository';
 import { bookingRepository } from '../bookings/repository';
-import { ListUsersQuery, UserStatusActionInput } from './schemas';
+import { ListUsersQuery, UserStatusActionInput, CreateUserInput } from './schemas';
+import { authService } from '../auth/auth.service';
 import { ListBookingsQuery } from '../bookings/schemas';
 import { ListReviewsQuery } from '../reviews/schemas';
 
@@ -77,6 +78,30 @@ export class AdminService {
       travelerProfile: user.travelerProfile,
       provider: user.provider,
     };
+  }
+
+  async createUser(input: CreateUserInput) {
+    const passwordHash = await authService.hashPassword(input.password);
+    const user = await prisma.user.create({
+      data: {
+        email: input.email,
+        fullName: input.fullName,
+        passwordHash,
+        role: input.role,
+        phone: input.phone,
+        status: UserStatus.active,
+        emailVerifiedAt: new Date(),
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+    return user;
   }
 
   async suspendUser(
