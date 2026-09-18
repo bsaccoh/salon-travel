@@ -65,10 +65,11 @@ export class BookingController {
   accept = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.userId;
+      const userRole = req.user!.role as UserRole;
       const { id } = req.params;
       const context = AuditService.contextFromRequest(req);
 
-      const updated = await this.service.acceptBooking(userId, id, context);
+      const updated = await this.service.acceptBooking(userId, userRole, id, context);
 
       sendSuccess(res, updated);
     } catch (err) {
@@ -79,11 +80,12 @@ export class BookingController {
   decline = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.userId;
+      const userRole = req.user!.role as UserRole;
       const { id } = req.params;
       const { reason } = req.body as BookingActionInput;
       const context = AuditService.contextFromRequest(req);
 
-      const updated = await this.service.declineBooking(userId, id, reason, context);
+      const updated = await this.service.declineBooking(userId, userRole, id, reason, context);
 
       sendSuccess(res, updated);
     } catch (err) {
@@ -110,10 +112,11 @@ export class BookingController {
   complete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.userId;
+      const userRole = req.user!.role as UserRole;
       const { id } = req.params;
       const context = AuditService.contextFromRequest(req);
 
-      const updated = await this.service.completeBooking(userId, id, context);
+      const updated = await this.service.completeBooking(userId, userRole, id, context);
 
       sendSuccess(res, updated);
     } catch (err) {

@@ -166,6 +166,7 @@ export class BookingService {
 
   async acceptBooking(
     userId: string,
+    userRole: UserRole,
     bookingId: string,
     context: AuditContext,
   ): Promise<Booking> {
@@ -174,17 +175,20 @@ export class BookingService {
       throw new NotFoundError('Booking', bookingId);
     }
 
-    // Verify caller owns provider
-    const provider = await this.providerRepo.findByUserId(userId);
-    if (!provider || provider.id !== booking.providerId) {
-      throw new NotFoundError('Booking', bookingId);
+    if (userRole !== UserRole.admin) {
+      const provider = await this.providerRepo.findByUserId(userId);
+      if (!provider || provider.id !== booking.providerId) {
+        throw new NotFoundError('Booking', bookingId);
+      }
     }
+
+    const actorRole = userRole === UserRole.admin ? UserRole.admin : UserRole.provider;
 
     // Validate transition
     BookingStateMachine.validateTransition({
       fromStatus: booking.status,
       toStatus: BookingStatus.accepted,
-      actorRole: UserRole.provider,
+      actorRole,
     });
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -204,8 +208,8 @@ export class BookingService {
           fromStatus: booking.status,
           toStatus: BookingStatus.accepted,
           actorId: userId,
-          actorRole: UserRole.provider,
-          reason: 'Accepted by service provider',
+          actorRole,
+          reason: userRole === UserRole.admin ? 'Accepted by admin' : 'Accepted by service provider',
         },
         tx,
       );
@@ -242,6 +246,7 @@ export class BookingService {
 
   async declineBooking(
     userId: string,
+    userRole: UserRole,
     bookingId: string,
     reason: string | undefined,
     context: AuditContext,
@@ -251,15 +256,19 @@ export class BookingService {
       throw new NotFoundError('Booking', bookingId);
     }
 
-    const provider = await this.providerRepo.findByUserId(userId);
-    if (!provider || provider.id !== booking.providerId) {
-      throw new NotFoundError('Booking', bookingId);
+    if (userRole !== UserRole.admin) {
+      const provider = await this.providerRepo.findByUserId(userId);
+      if (!provider || provider.id !== booking.providerId) {
+        throw new NotFoundError('Booking', bookingId);
+      }
     }
+
+    const actorRole = userRole === UserRole.admin ? UserRole.admin : UserRole.provider;
 
     BookingStateMachine.validateTransition({
       fromStatus: booking.status,
       toStatus: BookingStatus.declined,
-      actorRole: UserRole.provider,
+      actorRole,
       reason,
     });
 
@@ -280,7 +289,7 @@ export class BookingService {
           fromStatus: booking.status,
           toStatus: BookingStatus.declined,
           actorId: userId,
-          actorRole: UserRole.provider,
+          actorRole,
           reason,
         },
         tx,
@@ -431,6 +440,7 @@ export class BookingService {
 
   async completeBooking(
     userId: string,
+    userRole: UserRole,
     bookingId: string,
     context: AuditContext,
   ): Promise<Booking> {
@@ -439,15 +449,19 @@ export class BookingService {
       throw new NotFoundError('Booking', bookingId);
     }
 
-    const provider = await this.providerRepo.findByUserId(userId);
-    if (!provider || provider.id !== booking.providerId) {
-      throw new NotFoundError('Booking', bookingId);
+    if (userRole !== UserRole.admin) {
+      const provider = await this.providerRepo.findByUserId(userId);
+      if (!provider || provider.id !== booking.providerId) {
+        throw new NotFoundError('Booking', bookingId);
+      }
     }
+
+    const actorRole = userRole === UserRole.admin ? UserRole.admin : UserRole.provider;
 
     BookingStateMachine.validateTransition({
       fromStatus: booking.status,
       toStatus: BookingStatus.completed,
-      actorRole: UserRole.provider,
+      actorRole,
     });
 
     const updated = await prisma.$transaction(async (tx) => {
