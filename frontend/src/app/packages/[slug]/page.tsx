@@ -217,7 +217,7 @@ export default function PackageDetailPage({ params }: { params: { slug: string }
               </div>
 
               {service.isActive !== false ? (
-                <Link href={`/providers`} className="block">
+                <Link href={`/bookings/new?serviceId=${service.id}`} className="block">
                   <Button variant="traveler-cta" size="lg" className="w-full font-bold gap-2">
                     <CalendarPlus className="w-4 h-4" />
                     Book This Experience

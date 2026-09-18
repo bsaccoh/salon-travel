@@ -38,15 +38,14 @@ function NewBookingContent() {
   const [error, setError] = useState<string | null>(null);
   const [createdBooking, setCreatedBooking] = useState<any>(null);
 
-  // Fallback defaults for robust presentation
   const service = {
-    id: remoteService?.id || serviceId || 'srv-101',
-    providerId: remoteService?.providerId || 'prov-101',
-    name: remoteService?.name || 'Banana Islands Day Boat Charter & Snorkeling',
-    providerName: remoteService?.provider?.businessName || 'Banana Island Eco Tours',
-    priceCents: remoteService?.priceCents || 150000,
+    id: remoteService?.id || serviceId,
+    providerId: remoteService?.providerId || '',
+    name: remoteService?.name || 'Loading…',
+    providerName: remoteService?.provider?.businessName || '',
+    priceCents: remoteService?.priceCents || 0,
     currency: remoteService?.currency || 'SLE',
-    maxCapacity: remoteService?.maxCapacity || 8,
+    maxCapacity: remoteService?.maxCapacity || null,
   };
 
   const unitPrice = service.priceCents / 100;
@@ -56,6 +55,11 @@ function NewBookingContent() {
 
   const handleBookingSubmit = async () => {
     setError(null);
+
+    if (!remoteService) {
+      setError('This service could not be found. Please go back and select a valid package.');
+      return;
+    }
 
     if (!user) {
       router.push(`/auth/login?redirect=/bookings/new?serviceId=${service.id}`);
@@ -76,14 +80,8 @@ function NewBookingContent() {
       setCreatedBooking(res.data);
       setStep(4);
     } catch (err: any) {
-      // Fallback for simulation/testing if unseeded
-      const fallbackBooking = {
-        id: `bkg-${Date.now().toString().slice(-4)}`,
-        reference: `ST-${Math.floor(10000 + Math.random() * 90000)}`,
-        status: 'pending',
-      };
-      setCreatedBooking(fallbackBooking);
-      setStep(4);
+      const msg = err?.message || 'Something went wrong. Please try again.';
+      setError(msg);
     }
   };
 
