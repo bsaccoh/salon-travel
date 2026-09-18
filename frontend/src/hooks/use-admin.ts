@@ -111,6 +111,17 @@ export function useAdminRefunds(filters?: AdminFilters) {
   });
 }
 
+export function useAdminUpdateUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: string }) =>
+      apiClient.patch(`/admin/users/${id}`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
 export function useAdminSuspendUser() {
   const queryClient = useQueryClient();
   return useMutation({

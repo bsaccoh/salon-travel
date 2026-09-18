@@ -10,12 +10,14 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import { useRouter } from 'next/navigation';
 import { Search, ShieldCheck, Eye, Loader2 } from 'lucide-react';
 import { ActionDropdown } from '@/components/ui/dropdown';
 import { useAdminProviders } from '@/hooks/use-admin';
 import { ErrorState } from '@/components/ui/error-state';
 
 export default function AdminProvidersDirectoryPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -89,7 +91,11 @@ export default function AdminProvidersDirectoryPage() {
               </TableHeader>
               <TableBody>
                 {(providers || []).map((p) => (
-                  <TableRow key={p.id}>
+                  <TableRow
+                    key={p.id}
+                    className="cursor-pointer hover:bg-slate-light/30"
+                    onClick={() => router.push(`/admin/providers/${p.id}`)}
+                  >
                     <TableCell className="font-bold text-text">{p.businessName}</TableCell>
                     <TableCell className="text-text-muted font-medium">{p.category}</TableCell>
                     <TableCell className="text-text-muted font-medium">{p.city}</TableCell>
@@ -109,22 +115,20 @@ export default function AdminProvidersDirectoryPage() {
                         {p.status.replace('_', ' ')}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end">
                         <ActionDropdown
                           items={[
                             {
-                              label: 'Audit Verification',
+                              label: 'Audit & Verify',
                               icon: ShieldCheck,
-                              onClick: () => {
-                                window.location.href = `/admin/providers/${p.id}`;
-                              },
+                              onClick: () => router.push(`/admin/providers/${p.id}`),
                             },
                             {
-                              label: 'View Profile',
+                              label: 'View Public Profile',
                               icon: Eye,
-                              onClick: () => {},
-                            }
+                              onClick: () => window.open(`/providers/${p.slug}`, '_blank'),
+                            },
                           ]}
                         />
                       </div>
