@@ -135,6 +135,15 @@ export class AdminController {
       next(err);
     }
   };
+
+  seedDemoData = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.seedDemoData();
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export const adminController = new AdminController();

@@ -180,3 +180,11 @@ adminRoutes.post(
   conversationController.adminReassign,
 );
 
+// ── 7. Demo Data Seeding (admin only) ─────────────────
+
+adminRoutes.post(
+  '/seed-demo-data',
+  authorize('admin'),
+  adminController.seedDemoData,
+);
+

@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import { AdminSidebar } from '@/components/dashboard/admin-sidebar';
 import { AdminTopbar } from '@/components/dashboard/admin-topbar';
-import { Shield, Key, Users, Check, X, Plus, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, Key, Users, Check, X, Database, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/components/ui/table';
-import { useAdminUsers, useAdminUpdateUserRole } from '@/hooks/use-admin';
+import { useAdminUsers, useAdminUpdateUserRole, useAdminSeedDemoData } from '@/hooks/use-admin';
 
 const permissions = [
   'View Dashboard Analytics',
@@ -55,8 +55,10 @@ const ROLE_LABEL: Record<string, { label: string; color: string }> = {
 const STAFF_ROLES = ['admin', 'concierge'] as const;
 
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'roles' | 'assignments'>('roles');
+  const [activeTab, setActiveTab] = useState<'roles' | 'assignments' | 'data'>('roles');
   const [assignModal, setAssignModal] = useState(false);
+  const [seedDone, setSeedDone] = useState<{ destinations: number; services: number } | null>(null);
+  const seedMutation = useAdminSeedDemoData();
   const [editTarget, setEditTarget] = useState<{ id: string; name: string; role: string } | null>(null);
   const [selectedRole, setSelectedRole] = useState('concierge');
   const [searchEmail, setSearchEmail] = useState('');
@@ -100,15 +102,15 @@ export default function AdminSettingsPage() {
         <AdminTopbar title="Settings & Access Control" subtitle="Manage platform configurations, privileges, and role assignments." />
 
         <div className="flex border-b border-border mb-8">
-          {(['roles', 'assignments'] as const).map((tab) => (
+          {(['roles', 'assignments', 'data'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setActiveTab(tab as any)}
               className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
                 activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text'
               }`}
             >
-              {tab === 'roles' ? 'Privilege Control (Roles)' : 'Role Assignments'}
+              {tab === 'roles' ? 'Privilege Control (Roles)' : tab === 'assignments' ? 'Role Assignments' : 'Demo Data'}
             </button>
           ))}
         </div>
@@ -244,6 +246,63 @@ export default function AdminSettingsPage() {
                 </Table>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'data' && (
+          <div className="max-w-xl space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-text flex items-center gap-2">
+                <Database className="w-5 h-5 text-primary" />
+                Demo Data Seeding
+              </h2>
+              <p className="text-xs text-text-muted mt-1">
+                Populate the platform with 8 Sierra Leone destinations and 7 sample tours/experiences so the site has content to display. Only runs if destinations or services tables are empty — safe to trigger at any time.
+              </p>
+            </div>
+
+            {seedDone && (
+              <div className="p-4 rounded-xl bg-success-light border border-success/20 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
+                <div className="text-sm text-success font-semibold">
+                  Seeded successfully — {seedDone.destinations} destinations and {seedDone.services} services added.
+                  {seedDone.destinations === 0 && seedDone.services === 0 && ' (Tables already had data — nothing was added.)'}
+                </div>
+              </div>
+            )}
+
+            <div className="p-6 rounded-2xl border border-border bg-surface shadow-card space-y-4">
+              <div className="space-y-2 text-xs text-text-muted">
+                <p className="font-semibold text-text">What gets seeded:</p>
+                <ul className="space-y-1 list-none">
+                  {[
+                    '8 destinations (River No. 2, Banana Islands, Tacugama, Bunce Island, Bureh Beach, Tokeh Beach, Tiwai Island, Outamba-Kilimi)',
+                    '7 tours & experiences (beach transfers, wildlife treks, boat charters, surf lessons, heritage walks)',
+                    'Services are linked to the first approved provider in the database',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full font-bold"
+                isLoading={seedMutation.isPending}
+                onClick={() => {
+                  setSeedDone(null);
+                  seedMutation.mutate(undefined, {
+                    onSuccess: (res) => setSeedDone(res.data),
+                  });
+                }}
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Load Demo Data Now
+              </Button>
+            </div>
           </div>
         )}
 

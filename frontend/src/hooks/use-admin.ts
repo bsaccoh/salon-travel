@@ -111,6 +111,17 @@ export function useAdminRefunds(filters?: AdminFilters) {
   });
 }
 
+export function useAdminSeedDemoData() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post<{ destinations: number; services: number }>('/admin/seed-demo-data', {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['destinations'] });
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
+}
+
 export function useAdminUpdateUserRole() {
   const queryClient = useQueryClient();
   return useMutation({
