@@ -10,7 +10,7 @@ services:
     name: salone-travel-backend
     env: node
     region: ohio # Default US East, change to your preference
-    buildCommand: npm --prefix backend install && npm --prefix backend run prisma:generate && npm --prefix backend run build && npm --prefix backend run prisma:migrate:deploy
+    buildCommand: npm --prefix backend install --include=dev && npm --prefix backend run prisma:generate && npm --prefix backend run build && npm --prefix backend run prisma:migrate:deploy
     startCommand: npm --prefix backend start
     envVars:
       - key: NODE_ENV
@@ -38,7 +38,7 @@ services:
     name: salone-travel-frontend
     env: node
     region: ohio # Keep same as backend
-    buildCommand: npm --prefix frontend install && npm --prefix frontend run build
+    buildCommand: npm --prefix frontend install --include=dev && npm --prefix frontend run build
     startCommand: npm --prefix frontend start
     envVars:
       - key: NODE_ENV
