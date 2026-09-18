@@ -25,12 +25,15 @@ export interface Destination {
   name: string;
   slug: string;
   description: string;
+  shortDescription?: string | null;
   region: string;
   category: string;
   latitude: number | null;
   longitude: number | null;
   coverImageUrl: string | null;
   galleryUrls: string[];
+  images?: string[];
+  highlights?: string[];
   isFeatured: boolean;
   viewCount: number;
   createdAt: string;
@@ -38,6 +41,8 @@ export interface Destination {
   startingPriceCents?: number;
   providerCount?: number;
   distanceKm?: number;
+  ratingAverage?: number;
+  reviewCount?: number;
 }
 
 export interface Provider {

@@ -42,13 +42,42 @@ export interface CreateDestinationInput {
   category: string;
   region?: string;
   description?: string;
+  shortDescription?: string;
+  images?: string[];
+  highlights?: string[];
+  isFeatured?: boolean;
+  latitude?: number;
+  longitude?: number;
 }
+
+export interface UpdateDestinationInput extends Partial<CreateDestinationInput> {}
 
 export function useCreateDestination() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateDestinationInput) =>
       apiClient.post<Destination>('/destinations', input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['destinations'] });
+    },
+  });
+}
+
+export function useUpdateDestination() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: UpdateDestinationInput & { id: string }) =>
+      apiClient.patch<Destination>(`/destinations/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['destinations'] });
+    },
+  });
+}
+
+export function useDeleteDestination() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/destinations/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['destinations'] });
     },
