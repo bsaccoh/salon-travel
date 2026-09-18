@@ -160,6 +160,48 @@ export function useAdminDeleteService() {
   });
 }
 
+export function useAdminAcceptBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.post(`/bookings/${id}/accept`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+    },
+  });
+}
+
+export function useAdminDeclineBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      apiClient.post(`/bookings/${id}/decline`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+    },
+  });
+}
+
+export function useAdminCancelBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      apiClient.post(`/bookings/${id}/cancel`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+    },
+  });
+}
+
+export function useAdminCompleteBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.post(`/bookings/${id}/complete`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+    },
+  });
+}
+
 export function useAdminSeedDemoData() {
   const queryClient = useQueryClient();
   return useMutation({
