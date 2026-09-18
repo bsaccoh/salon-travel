@@ -64,45 +64,71 @@ function DestinationForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+    <form onSubmit={handleSubmit} className="space-y-4 mt-1">
       {error && (
         <div className="p-3 bg-danger-light border border-danger/20 rounded-xl flex items-start gap-2 text-xs font-semibold text-danger">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />{error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input label="Destination Name *" required value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Tiwai Island Wildlife Sanctuary" />
+      {/* Row 1: Name + Category */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 sm:col-span-1">
+          <Input label="Name *" required value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Tiwai Island Wildlife Sanctuary" />
+        </div>
         <div>
           <label className="block text-xs font-semibold text-text mb-1.5">Category *</label>
           <select
             required value={form.category}
             onChange={e => set('category', e.target.value)}
-            className="flex h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm focus:outline-none focus:border-primary capitalize"
+            className="flex h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm focus:outline-none focus:border-primary"
           >
-            <option value="">Select category…</option>
-            {CATEGORIES.map(c => <option key={c} value={c} className="capitalize">{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+            <option value="">Select…</option>
+            {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
           </select>
         </div>
-        <Input label="Region / Province" value={form.region || ''} onChange={e => set('region', e.target.value)} placeholder="e.g. Moa River, Southern Province" />
-        <Input label="Short Description (max 255 chars)" value={form.shortDescription || ''} onChange={e => set('shortDescription', e.target.value)} placeholder="One-line summary shown on cards" />
       </div>
 
+      {/* Row 2: Region (full width) */}
+      <Input label="Region / Province" value={form.region || ''} onChange={e => set('region', e.target.value)} placeholder="e.g. Moa River, Southern Province" />
+
+      {/* Row 3: Short Description (full width) */}
+      <div>
+        <label className="block text-xs font-semibold text-text mb-1.5">
+          Short Description <span className="font-normal text-text-muted">(shown on cards, max 255 chars)</span>
+        </label>
+        <input
+          type="text"
+          maxLength={255}
+          value={form.shortDescription || ''}
+          onChange={e => set('shortDescription', e.target.value)}
+          placeholder="One-line summary shown on destination cards"
+          className="flex h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm focus:outline-none focus:border-primary"
+        />
+      </div>
+
+      {/* Row 4: Full Description */}
       <div>
         <label className="block text-xs font-semibold text-text mb-1.5">Full Description</label>
         <textarea
-          className="w-full h-28 p-3 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary resize-none"
+          className="w-full h-24 p-3 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary resize-none"
           placeholder="Rich description of the destination…"
           value={form.description || ''}
           onChange={e => set('description', e.target.value)}
         />
       </div>
 
-      {/* Images */}
-      <div>
-        <label className="block text-xs font-semibold text-text mb-1.5">
+      {/* Row 5: Lat + Lng side by side */}
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Latitude (optional)" type="number" step="any" value={form.latitude ?? ''} onChange={e => set('latitude', e.target.value ? parseFloat(e.target.value) : undefined)} placeholder="8.4606" />
+        <Input label="Longitude (optional)" type="number" step="any" value={form.longitude ?? ''} onChange={e => set('longitude', e.target.value ? parseFloat(e.target.value) : undefined)} placeholder="-13.2317" />
+      </div>
+
+      {/* Row 6: Images */}
+      <div className="pt-1 border-t border-border/50">
+        <label className="block text-xs font-semibold text-text mb-2">
           <ImageIcon className="w-3.5 h-3.5 inline mr-1 text-primary" />
-          Images (paste image URLs)
+          Images <span className="font-normal text-text-muted">(paste URL, press Enter or Add)</span>
         </label>
         <div className="flex gap-2">
           <input
@@ -128,11 +154,11 @@ function DestinationForm({
         )}
       </div>
 
-      {/* Highlights */}
+      {/* Row 7: Highlights */}
       <div>
-        <label className="block text-xs font-semibold text-text mb-1.5">
+        <label className="block text-xs font-semibold text-text mb-2">
           <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-success" />
-          Highlights
+          Highlights <span className="font-normal text-text-muted">(press Enter or Add)</span>
         </label>
         <div className="flex gap-2">
           <input
@@ -155,11 +181,6 @@ function DestinationForm({
             ))}
           </ul>
         )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Input label="Latitude (optional)" type="number" step="any" value={form.latitude ?? ''} onChange={e => set('latitude', e.target.value ? parseFloat(e.target.value) : undefined)} placeholder="8.4606" />
-        <Input label="Longitude (optional)" type="number" step="any" value={form.longitude ?? ''} onChange={e => set('longitude', e.target.value ? parseFloat(e.target.value) : undefined)} placeholder="-13.2317" />
       </div>
 
       <label className="flex items-center gap-3 cursor-pointer">
