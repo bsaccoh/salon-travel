@@ -58,8 +58,8 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true, limit: MAX_REQUEST_BODY_SIZE }));
   app.use(cookieParser());
 
-  // 6. Response compression
-  app.use(compression());
+  // 6. Response compression — skip payloads under 1 KB (gzip overhead not worth it)
+  app.use(compression({ threshold: 1024 }));
 
   // 7. Static file serving for uploads (local storage)
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

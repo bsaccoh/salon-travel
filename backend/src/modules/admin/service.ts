@@ -9,6 +9,7 @@ import { ListUsersQuery, UserStatusActionInput, CreateUserInput } from './schema
 import { authService } from '../auth/auth.service';
 import { ListBookingsQuery } from '../bookings/schemas';
 import { ListReviewsQuery } from '../reviews/schemas';
+import { cache, CACHE_TTL_DASHBOARD } from '../../common/cache/redis-cache';
 
 export class AdminService {
   async listUsers(query: ListUsersQuery) {
@@ -170,53 +171,55 @@ export class AdminService {
   }
 
   async getDashboardStats() {
-    const [
-      totalTravelers,
-      totalProviders,
-      approvedProviders,
-      pendingProviders,
-      totalBookings,
-      recentBookings,
-      revenueAgg,
-      bookingsByStatus,
-    ] = await Promise.all([
-      prisma.user.count({ where: { role: UserRole.traveler } }),
-      prisma.provider.count(),
-      prisma.provider.count({ where: { status: ProviderStatus.approved } }),
-      prisma.provider.count({ where: { status: ProviderStatus.submitted } }),
-      prisma.booking.count(),
-      prisma.booking.count({
-        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
-      }),
-      prisma.payment.aggregate({
-        where: { status: PaymentStatus.succeeded },
-        _sum: { amountCents: true },
-      }),
-      prisma.booking.groupBy({
-        by: ['status'],
-        _count: { id: true },
-      }),
-    ]);
+    return cache.getOrSet('admin:dashboard', CACHE_TTL_DASHBOARD, async () => {
+      const [
+        totalTravelers,
+        totalProviders,
+        approvedProviders,
+        pendingProviders,
+        totalBookings,
+        recentBookings,
+        revenueAgg,
+        bookingsByStatus,
+      ] = await Promise.all([
+        prisma.user.count({ where: { role: UserRole.traveler } }),
+        prisma.provider.count(),
+        prisma.provider.count({ where: { status: ProviderStatus.approved } }),
+        prisma.provider.count({ where: { status: ProviderStatus.submitted } }),
+        prisma.booking.count(),
+        prisma.booking.count({
+          where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+        }),
+        prisma.payment.aggregate({
+          where: { status: PaymentStatus.succeeded },
+          _sum: { amountCents: true },
+        }),
+        prisma.booking.groupBy({
+          by: ['status'],
+          _count: { id: true },
+        }),
+      ]);
 
-    const grossRevenueCents = revenueAgg._sum?.amountCents || 0;
-    const commissionCents = Math.round(grossRevenueCents * 0.15);
+      const grossRevenueCents = revenueAgg._sum?.amountCents || 0;
+      const commissionCents = Math.round(grossRevenueCents * 0.15);
 
-    const statusCounts: Record<string, number> = {};
-    for (const row of bookingsByStatus) {
-      statusCounts[row.status] = row._count.id;
-    }
+      const statusCounts: Record<string, number> = {};
+      for (const row of bookingsByStatus) {
+        statusCounts[row.status] = row._count.id;
+      }
 
-    return {
-      totalTravelers,
-      totalProviders,
-      approvedProviders,
-      pendingProviders,
-      totalBookings,
-      recentBookings,
-      grossRevenueCents,
-      commissionCents,
-      bookingsByStatus: statusCounts,
-    };
+      return {
+        totalTravelers,
+        totalProviders,
+        approvedProviders,
+        pendingProviders,
+        totalBookings,
+        recentBookings,
+        grossRevenueCents,
+        commissionCents,
+        bookingsByStatus: statusCounts,
+      };
+    });
   }
 
   async listReviews(query: ListReviewsQuery) {
@@ -238,32 +241,39 @@ export class AdminService {
   }
 
   async getMonthlyChart(months = 6) {
-    const results: { month: string; bookings: number; revenueCents: number }[] = [];
-    const now = new Date();
+    const cacheKey = `admin:monthly-chart:${months}`;
 
-    for (let i = months - 1; i >= 0; i--) {
-      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const label = start.toLocaleString('en-US', { month: 'short' });
+    return cache.getOrSet(cacheKey, 5 * 60, async () => {
+      const now = new Date();
 
-      const [bookingCount, revenueAgg] = await Promise.all([
-        prisma.booking.count({
-          where: { createdAt: { gte: start, lt: end } },
-        }),
-        prisma.payment.aggregate({
-          where: { status: PaymentStatus.succeeded, createdAt: { gte: start, lt: end } },
-          _sum: { amountCents: true },
-        }),
-      ]);
-
-      results.push({
-        month: label,
-        bookings: bookingCount,
-        revenueCents: revenueAgg._sum?.amountCents || 0,
+      // Build date ranges for all months upfront
+      const ranges = Array.from({ length: months }, (_, idx) => {
+        const offset = months - 1 - idx;
+        const start = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+        const end = new Date(now.getFullYear(), now.getMonth() - offset + 1, 1);
+        const label = start.toLocaleString('en-US', { month: 'short' });
+        return { start, end, label };
       });
-    }
 
-    return results;
+      // Fire all DB queries in parallel (2 per month × N months)
+      const settled = await Promise.all(
+        ranges.map(({ start, end }) =>
+          Promise.all([
+            prisma.booking.count({ where: { createdAt: { gte: start, lt: end } } }),
+            prisma.payment.aggregate({
+              where: { status: PaymentStatus.succeeded, createdAt: { gte: start, lt: end } },
+              _sum: { amountCents: true },
+            }),
+          ]),
+        ),
+      );
+
+      return ranges.map(({ label }, i) => ({
+        month: label,
+        bookings: settled[i][0],
+        revenueCents: settled[i][1]._sum?.amountCents || 0,
+      }));
+    });
   }
 
   async getActivityFeed(limit = 20) {

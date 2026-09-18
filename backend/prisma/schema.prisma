@@ -296,6 +296,7 @@ model Provider {
   @@index([verificationStatus])
   @@index([city])
   @@index([deletedAt])
+  @@index([createdAt])
   @@map("providers")
 }
 
@@ -331,6 +332,7 @@ model Service {
   @@index([type])
   @@index([isActive])
   @@index([deletedAt])
+  @@index([createdAt])
   @@map("services")
 }
 
@@ -430,6 +432,7 @@ model Booking {
   @@index([status])
   @@index([scheduledDate])
   @@index([expiresAt])
+  @@index([createdAt])
   @@map("bookings")
 }
 
@@ -478,6 +481,7 @@ model Payment {
   @@index([bookingId])
   @@index([status])
   @@index([stripePaymentIntentId])
+  @@index([createdAt])
   @@map("payments")
 }
 
@@ -549,6 +553,7 @@ model Conversation {
   @@index([bookingId])
   @@index([isEmergency])
   @@index([isClosed])
+  @@index([updatedAt])
   @@map("conversations")
 }
 
@@ -570,6 +575,7 @@ model Message {
   @@index([conversationId])
   @@index([senderId])
   @@index([createdAt])
+  @@index([conversationId, isRead])
   @@map("messages")
 }
 

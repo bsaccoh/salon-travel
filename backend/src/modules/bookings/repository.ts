@@ -12,8 +12,31 @@ export class BookingRepository {
     return tx.booking.findUnique({
       where: { id },
       include: {
-        service: true,
-        provider: true,
+        service: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            shortDescription: true,
+            priceCents: true,
+            currency: true,
+            durationMinutes: true,
+            maxCapacity: true,
+            images: true,
+            isActive: true,
+          },
+        },
+        provider: {
+          select: {
+            id: true,
+            businessName: true,
+            email: true,
+            phone: true,
+            logoUrl: true,
+            city: true,
+            avgRating: true,
+          },
+        },
         traveler: {
           select: {
             id: true,
@@ -24,6 +47,7 @@ export class BookingRepository {
         },
         events: {
           orderBy: { createdAt: 'asc' },
+          take: 50,
         },
         review: true,
       },

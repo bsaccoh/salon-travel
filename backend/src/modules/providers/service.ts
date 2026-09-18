@@ -166,50 +166,43 @@ export class ProviderService {
     const cacheKey = `providers:dashboard:${providerId}`;
 
     return cache.getOrSet(cacheKey, CACHE_TTL_DASHBOARD, async () => {
-      // 1. Fetch all bookings for this provider's services
-      const bookings = await prisma.booking.findMany({
-        where: {
-          service: { providerId },
-        },
-        select: {
-          status: true,
-          totalCents: true,
-          commissionCents: true,
-          providerEarningsCents: true,
-        },
-      });
+      // Use DB aggregation instead of loading all rows into memory
+      const [statusGroups, revenueAgg, ratingAgg, refundAgg] = await Promise.all([
+        // Count bookings per status in one query
+        prisma.booking.groupBy({
+          by: ['status'],
+          where: { providerId },
+          _count: { id: true },
+          _sum: { totalCents: true, commissionCents: true, providerEarningsCents: true },
+        }),
+        // Confirmed/paid/completed revenue totals
+        prisma.booking.aggregate({
+          where: {
+            providerId,
+            status: { in: ['paid', 'confirmed', 'completed'] as any },
+          },
+          _sum: { totalCents: true, commissionCents: true, providerEarningsCents: true },
+        }),
+        prisma.review.aggregate({
+          where: { providerId, status: 'published', deletedAt: null },
+          _avg: { rating: true },
+        }),
+        prisma.refund.aggregate({
+          where: { booking: { providerId }, status: 'succeeded' },
+          _sum: { amountCents: true },
+        }),
+      ]);
 
-      let pendingRequests = 0;
-      let upcomingBookings = 0;
-      let completedBookings = 0;
-      let grossBookingValue = 0;
-      let providerEarnings = 0;
-      let commission = 0;
+      const countByStatus = Object.fromEntries(
+        statusGroups.map((g) => [g.status, g._count.id]),
+      );
 
-      for (const b of bookings) {
-        if (b.status === 'pending') pendingRequests++;
-        if (b.status === 'confirmed' || b.status === 'paid') upcomingBookings++;
-        if (b.status === 'completed') completedBookings++;
-
-        if (['paid', 'confirmed', 'completed'].includes(b.status)) {
-          grossBookingValue += b.totalCents;
-          providerEarnings += b.providerEarningsCents;
-          commission += b.commissionCents;
-        }
-      }
-
-      const ratingAgg = await prisma.review.aggregate({
-        where: { providerId, status: 'published', deletedAt: null },
-        _avg: { rating: true },
-      });
-
-      const refundAgg = await prisma.refund.aggregate({
-        where: {
-          booking: { providerId },
-          status: 'succeeded',
-        },
-        _sum: { amountCents: true },
-      });
+      const pendingRequests = countByStatus['pending'] ?? 0;
+      const upcomingBookings = (countByStatus['confirmed'] ?? 0) + (countByStatus['paid'] ?? 0);
+      const completedBookings = countByStatus['completed'] ?? 0;
+      const grossBookingValue = revenueAgg._sum.totalCents ?? 0;
+      const providerEarnings = revenueAgg._sum.providerEarningsCents ?? 0;
+      const commission = revenueAgg._sum.commissionCents ?? 0;
 
       const averageRating = ratingAgg._avg.rating ?? null;
       const refundAdjustments = refundAgg._sum.amountCents ?? 0;
