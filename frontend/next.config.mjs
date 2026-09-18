@@ -9,10 +9,11 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/v1', '') || 'http://localhost:3000';
     return [
       {
         source: '/api/v1/:path*',
-        destination: 'http://localhost:3000/v1/:path*',
+        destination: `${apiBase}/v1/:path*`,
       },
     ];
   },
