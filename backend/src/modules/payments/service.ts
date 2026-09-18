@@ -72,7 +72,9 @@ export class PaymentService {
 
     // 5. Server price & currency authoritative check
     const amountCents = booking.totalCents;
-    const currency = (booking.currency || 'SLL').toLowerCase();
+    // SLL/SLE are not in Stripe's supported currency list.
+    // Process via USD; display currency stays on the booking record.
+    const currency = 'usd';
 
     if (amountCents <= 0) {
       throw new ValidationError('Invalid booking amount');

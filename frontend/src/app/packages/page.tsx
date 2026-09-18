@@ -201,10 +201,10 @@ export default function PackagesPage() {
                           </p>
                         </div>
                         <Link
-                          href={`/providers`}
+                          href={`/packages/${s.id}`}
                           className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0B3D2E] text-white text-xs font-bold hover:bg-[#145A38] transition-colors"
                         >
-                          Book <ArrowRight className="w-3.5 h-3.5" />
+                          View <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </div>
                     </div>

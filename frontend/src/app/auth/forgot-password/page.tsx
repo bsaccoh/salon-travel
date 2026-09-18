@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      await apiClient.post('/auth/forgot-password', { email });
+      await apiClient.post('/auth/password/forgot', { email });
       setSubmitted(true);
     } catch (err: any) {
       setError(err.message || 'Failed to request reset. Please try again.');
@@ -56,9 +56,17 @@ export default function ForgotPasswordPage() {
               </div>
               <h3 className="text-lg font-bold text-text">Check your inbox</h3>
               <p className="text-xs text-text-muted leading-relaxed">
-                If an account exists for <span className="font-semibold text-text">{email}</span>, you will receive a secure password reset link.
+                If an account exists for <span className="font-semibold text-text">{email}</span>, a 6-digit reset code has been sent to your email.
               </p>
-              <Link href="/auth/login" className="inline-block mt-4">
+              <Link
+                href={`/auth/reset-password?email=${encodeURIComponent(email)}`}
+                className="inline-block mt-4 w-full"
+              >
+                <Button variant="traveler-cta" size="md" className="w-full font-bold">
+                  Enter Reset Code
+                </Button>
+              </Link>
+              <Link href="/auth/login" className="inline-block">
                 <Button variant="outline" size="md">
                   Return to login
                 </Button>

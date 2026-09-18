@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useDestinations } from '@/hooks/use-destinations';
-import { usePackages, Package } from '@/hooks/use-packages';
+import { useServices } from '@/hooks/use-services';
 import {
   MapPin, Calendar, Users, Search, Globe, ChevronDown, Star,
   Menu, X, ChevronRight, Shield, ShieldCheck, Headset, Heart, LogOut,
@@ -93,9 +93,28 @@ export default function HomePage() {
   const [searchWhen, setSearchWhen] = useState('');
   const [searchGuests, setSearchGuests] = useState('2 Travelers');
 
-  // Packages from API
-  const { data: apiPackages, isLoading: packLoading } = usePackages({ featured: true, limit: 4 });
-  const packages = apiPackages?.length ? apiPackages : null;
+  // Services shown as packages on homepage
+  const { data: apiServices, isLoading: packLoading } = useServices({ limit: 4 });
+  const TYPE_IMAGES_HOME: Record<string, string> = {
+    tour:          'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=600&h=400&fit=crop&q=80',
+    accommodation: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop&q=80',
+    transport:     'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&h=400&fit=crop&q=80',
+    experience:    'https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?w=600&h=400&fit=crop&q=80',
+    dining:        'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&h=400&fit=crop&q=80',
+  };
+  const packages = apiServices?.length
+    ? apiServices.map((s, i) => ({
+        slug: s.id,
+        name: s.name,
+        tagline: s.shortDescription || s.description || '',
+        duration_days: s.durationMinutes ? Math.max(1, Math.round(s.durationMinutes / 480)) : 1,
+        duration_nights: s.durationMinutes && s.durationMinutes >= 960 ? Math.floor(s.durationMinutes / 960) : 0,
+        location: 'Sierra Leone',
+        price_per_person_cents: s.priceCents,
+        badge: i === 0 ? 'Popular' : i === 1 ? 'Best Seller' : '',
+        hero_image_url: s.images?.[0] || TYPE_IMAGES_HOME[s.type] || '',
+      }))
+    : null;
 
   // Scroll listener for nav shadow
   useEffect(() => {
