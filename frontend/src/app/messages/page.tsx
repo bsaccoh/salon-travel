@@ -15,12 +15,17 @@ import {
   Paperclip,
   Loader2,
   MessageSquare,
+  Plus,
 } from 'lucide-react';
+import { useCreateConversation } from '@/hooks/use-conversations';
 
 export default function TravelerMessagesPage() {
   const { user } = useAuth();
   const { data: conversations, isLoading: convsLoading } = useMyConversations();
+  const createConversation = useCreateConversation();
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [showNewConvForm, setShowNewConvForm] = useState(false);
 
   useEffect(() => {
     if (conversations?.length && !selectedConvId) {
@@ -79,12 +84,50 @@ export default function TravelerMessagesPage() {
           </div>
         ) : !conversations?.length ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-4 max-w-sm w-full">
               <MessageSquare className="w-12 h-12 text-primary mx-auto" />
               <h3 className="text-lg font-bold text-text">No conversations yet</h3>
-              <p className="text-xs text-text-muted max-w-sm">
-                Start a conversation with our concierge team from any booking page.
+              <p className="text-xs text-text-muted">
+                Send us a message and our concierge team will get back to you.
               </p>
+              {!showNewConvForm ? (
+                <Button variant="traveler-cta" size="md" className="font-bold gap-2" onClick={() => setShowNewConvForm(true)}>
+                  <Plus className="w-4 h-4" />
+                  Message Our Concierge
+                </Button>
+              ) : (
+                <div className="bg-surface border border-border rounded-2xl p-4 text-left space-y-3">
+                  <p className="text-xs font-semibold text-text">How can we help you?</p>
+                  <textarea
+                    rows={3}
+                    placeholder="Tell us about your trip, questions, or request..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background p-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowNewConvForm(false)}>Cancel</Button>
+                    <Button
+                      variant="traveler-cta"
+                      size="sm"
+                      className="flex-1 font-bold"
+                      isLoading={createConversation.isPending}
+                      disabled={!newMessage.trim()}
+                      onClick={async () => {
+                        if (!newMessage.trim()) return;
+                        try {
+                          const res = await createConversation.mutateAsync({ message: newMessage.trim(), subject: 'Concierge enquiry' });
+                          setSelectedConvId((res as any).data?.id || null);
+                          setShowNewConvForm(false);
+                          setNewMessage('');
+                        } catch {}
+                      }}
+                    >
+                      Send Message
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (

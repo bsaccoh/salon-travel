@@ -3,7 +3,9 @@
 import { io, Socket } from 'socket.io-client';
 import { apiClient } from './api-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000';
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  (process.env.NEXT_PUBLIC_API_URL?.replace(/\/v1\/?$/, '') ?? 'http://localhost:3000');
 
 class WebSocketManager {
   private socket: Socket | null = null;
